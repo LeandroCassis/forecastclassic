@@ -6,120 +6,116 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ForecastFiltersProps {
-  onFilterChange: (filterType: string, value: string) => void;
+  onFilterChange: (filterType: string, values: string[]) => void;
 }
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
+  const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
+    if (value === 'all') {
+      onFilterChange(filterType, checked ? allValues : []);
+    } else {
+      onFilterChange(filterType, checked ? [value] : []);
+    }
+  };
+
+  const renderFilterGroup = (
+    label: string, 
+    filterType: string, 
+    options: { value: string; label: string }[]
+  ) => {
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">{label}</label>
+        <div className="space-y-2 rounded-md border p-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id={`${filterType}-all`}
+              onCheckedChange={(checked) => 
+                handleCheckboxChange(
+                  filterType, 
+                  'all', 
+                  checked as boolean, 
+                  options.map(opt => opt.value)
+                )
+              }
+            />
+            <label 
+              htmlFor={`${filterType}-all`}
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Selecionar Todos
+            </label>
+          </div>
+          <div className="space-y-2">
+            {options.map((option) => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`${filterType}-${option.value}`}
+                  onCheckedChange={(checked) => 
+                    handleCheckboxChange(filterType, option.value, checked as boolean, [])
+                  }
+                />
+                <label 
+                  htmlFor={`${filterType}-${option.value}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {option.label}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Empresa</label>
-        <Select onValueChange={(value) => onFilterChange('empresa', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a empresa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="empresa1">Empresa 1</SelectItem>
-            <SelectItem value="empresa2">Empresa 2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Empresa', 'empresa', [
+        { value: 'empresa1', label: 'Empresa 1' },
+        { value: 'empresa2', label: 'Empresa 2' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Marca</label>
-        <Select onValueChange={(value) => onFilterChange('marca', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a marca" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="marca1">Marca 1</SelectItem>
-            <SelectItem value="marca2">Marca 2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Marca', 'marca', [
+        { value: 'marca1', label: 'Marca 1' },
+        { value: 'marca2', label: 'Marca 2' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Fábrica</label>
-        <Select onValueChange={(value) => onFilterChange('fabrica', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a fábrica" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fabrica1">Fábrica 1</SelectItem>
-            <SelectItem value="fabrica2">Fábrica 2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Fábrica', 'fabrica', [
+        { value: 'fabrica1', label: 'Fábrica 1' },
+        { value: 'fabrica2', label: 'Fábrica 2' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Família 1</label>
-        <Select onValueChange={(value) => onFilterChange('familia1', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a família 1" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="familia1_1">Família 1.1</SelectItem>
-            <SelectItem value="familia1_2">Família 1.2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Família 1', 'familia1', [
+        { value: 'familia1_1', label: 'Família 1.1' },
+        { value: 'familia1_2', label: 'Família 1.2' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Família 2</label>
-        <Select onValueChange={(value) => onFilterChange('familia2', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a família 2" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="familia2_1">Família 2.1</SelectItem>
-            <SelectItem value="familia2_2">Família 2.2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Família 2', 'familia2', [
+        { value: 'familia2_1', label: 'Família 2.1' },
+        { value: 'familia2_2', label: 'Família 2.2' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Produto</label>
-        <Select onValueChange={(value) => onFilterChange('produto', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o produto" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="VIOLÃO 12323">VIOLÃO 12323</SelectItem>
-            <SelectItem value="VIOLÃO 344334">VIOLÃO 344334</SelectItem>
-            <SelectItem value="VIOLÃO TRTRTRR">VIOLÃO TRTRTRR</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Produto', 'produto', [
+        { value: 'VIOLÃO 12323', label: 'VIOLÃO 12323' },
+        { value: 'VIOLÃO 344334', label: 'VIOLÃO 344334' },
+        { value: 'VIOLÃO TRTRTRR', label: 'VIOLÃO TRTRTRR' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Tipo</label>
-        <Select onValueChange={(value) => onFilterChange('tipo', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="REAL">REAL</SelectItem>
-            <SelectItem value="REVISÃO">REVISÃO</SelectItem>
-            <SelectItem value="ORÇAMENTO">ORÇAMENTO</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Tipo', 'tipo', [
+        { value: 'REAL', label: 'REAL' },
+        { value: 'REVISÃO', label: 'REVISÃO' },
+        { value: 'ORÇAMENTO', label: 'ORÇAMENTO' },
+      ])}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">Ano</label>
-        <Select onValueChange={(value) => onFilterChange('ano', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o ano" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="2024">2024</SelectItem>
-            <SelectItem value="2025">2025</SelectItem>
-            <SelectItem value="2026">2026</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {renderFilterGroup('Ano', 'ano', [
+        { value: '2024', label: '2024' },
+        { value: '2025', label: '2025' },
+        { value: '2026', label: '2026' },
+      ])}
     </div>
   );
 };

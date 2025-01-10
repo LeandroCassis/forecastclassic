@@ -4,26 +4,37 @@ import ForecastFilters from '@/components/ForecastFilters';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+interface Filters {
+  empresa: string[];
+  marca: string[];
+  fabrica: string[];
+  familia1: string[];
+  familia2: string[];
+  produto: string[];
+  tipo: string[];
+  ano: string[];
+}
+
 const Index = () => {
-  const [filters, setFilters] = useState({
-    empresa: '',
-    marca: '',
-    fabrica: '',
-    familia1: '',
-    familia2: '',
-    produto: '',
-    tipo: '',
-    ano: ''
+  const [filters, setFilters] = useState<Filters>({
+    empresa: [],
+    marca: [],
+    fabrica: [],
+    familia1: [],
+    familia2: [],
+    produto: [],
+    tipo: [],
+    ano: []
   });
 
   const [showFilters, setShowFilters] = useState(true);
 
-  const handleFilterChange = (filterType: string, value: string) => {
+  const handleFilterChange = (filterType: string, values: string[]) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: value
+      [filterType]: values
     }));
-    console.log('Filter updated:', { filterType, value });
+    console.log('Filter updated:', { filterType, values });
   };
 
   const toggleFilters = () => {
@@ -35,7 +46,7 @@ const Index = () => {
 
   // Função para verificar se um produto deve ser exibido com base nos filtros
   const shouldShowProduct = (produto: string) => {
-    if (filters.produto && filters.produto !== produto) {
+    if (filters.produto.length > 0 && !filters.produto.includes(produto)) {
       return false;
     }
     return true;
@@ -73,15 +84,19 @@ const Index = () => {
         {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
         
         <div className="space-y-4">
-          {filters.produto ? (
-            <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-              <h2 className="text-lg font-medium text-slate-700 mb-3">{filters.produto}</h2>
-              <ForecastTable 
-                produto={filters.produto} 
-                anoFiltro={filters.ano} 
-                tipoFiltro={filters.tipo}
-              />
-            </div>
+          {filters.produto.length > 0 ? (
+            <>
+              {filters.produto.map(produto => (
+                <div key={produto} className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
+                  <h2 className="text-lg font-medium text-slate-700 mb-3">{produto}</h2>
+                  <ForecastTable 
+                    produto={produto} 
+                    anoFiltro={filters.ano}
+                    tipoFiltro={filters.tipo}
+                  />
+                </div>
+              ))}
+            </>
           ) : (
             <>
               {produtos.map(produto => shouldShowProduct(produto) && (
@@ -89,7 +104,7 @@ const Index = () => {
                   <h2 className="text-lg font-medium text-slate-700 mb-3">{produto}</h2>
                   <ForecastTable 
                     produto={produto} 
-                    anoFiltro={filters.ano} 
+                    anoFiltro={filters.ano}
                     tipoFiltro={filters.tipo}
                   />
                 </div>
