@@ -11,7 +11,6 @@ interface ForecastData {
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
 const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
-  // Mock data - this would come from your database
   const [data, setData] = useState<ForecastData[]>([
     {
       ano: 2024,
@@ -54,16 +53,16 @@ const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
   };
 
   return (
-    <div className="rounded-md border border-table-border overflow-x-auto">
+    <div className="rounded-md border border-slate-200 overflow-x-auto">
       <Table>
-        <TableHeader className="bg-table-header">
-          <TableRow>
-            <TableHead className="text-white">ANO</TableHead>
-            <TableHead className="text-white">TIPO</TableHead>
+        <TableHeader>
+          <TableRow className="bg-slate-100">
+            <TableHead className="text-slate-700 font-medium">ANO</TableHead>
+            <TableHead className="text-slate-700 font-medium">TIPO</TableHead>
             {months.map(month => (
-              <TableHead key={month} className="text-white">{month}</TableHead>
+              <TableHead key={month} className="text-slate-700 font-medium">{month}</TableHead>
             ))}
-            <TableHead className="text-white">TOTAL</TableHead>
+            <TableHead className="text-slate-700 font-medium">TOTAL</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -74,25 +73,25 @@ const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
             return (
               <TableRow 
                 key={`${row.ano}-${row.tipo}`}
-                className={index % 2 === 0 ? 'bg-table-row' : 'bg-table-altRow'}
+                className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-slate-100 transition-colors`}
               >
-                <TableCell className="font-medium">{row.ano}</TableCell>
-                <TableCell>{row.tipo}</TableCell>
+                <TableCell className="font-medium text-slate-700">{row.ano}</TableCell>
+                <TableCell className="text-slate-700">{row.tipo}</TableCell>
                 {months.map(month => (
-                  <TableCell key={month}>
+                  <TableCell key={month} className="p-2">
                     {isEditable ? (
                       <input
                         type="number"
                         value={row.valores[month] || ''}
                         onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
-                        className="w-20 p-1 border rounded"
+                        className="w-16 p-1 border border-slate-200 rounded text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-colors"
                       />
                     ) : (
-                      row.valores[month] || '-'
+                      <span className="text-slate-700">{row.valores[month] || '-'}</span>
                     )}
                   </TableCell>
                 ))}
-                <TableCell className="font-bold">{total}</TableCell>
+                <TableCell className="font-semibold text-slate-700">{total}</TableCell>
               </TableRow>
             );
           })}
