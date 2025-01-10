@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ForecastTable from '@/components/ForecastTable';
+import ForecastFilters from '@/components/ForecastFilters';
 
 const Index = () => {
+  const [filters, setFilters] = useState({
+    empresa: '',
+    marca: '',
+    fabrica: '',
+    familia1: '',
+    familia2: '',
+    tipo: '',
+    ano: ''
+  });
+
+  const handleFilterChange = (filterType: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    console.log('Filter updated:', { filterType, value });
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-4">
       <div className="max-w-[95%] mx-auto space-y-4">
@@ -9,6 +28,8 @@ const Index = () => {
           <h1 className="text-xl font-semibold text-slate-700">Forecast e Vendas</h1>
           <p className="text-sm text-slate-500">Visualização e edição de previsões de vendas</p>
         </div>
+        
+        <ForecastFilters onFilterChange={handleFilterChange} />
         
         <div className="space-y-4">
           <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
