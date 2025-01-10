@@ -1,119 +1,125 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, value: string) => void;
 }
 
-type FilterOptions = {
-  [key: string]: string[];
-}
-
-type OpenStates = {
-  [key: string]: boolean;
-}
-
-type SelectedValues = {
-  [key: string]: string;
-}
-
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
-  const [openStates, setOpenStates] = useState<OpenStates>({});
-  const [selectedValues, setSelectedValues] = useState<SelectedValues>({});
-
-  // Initialize filterOptions with default values
-  const filterOptions: FilterOptions = {
-    empresa: ["Empresa 1", "Empresa 2"],
-    marca: ["Marca 1", "Marca 2"],
-    fabrica: ["Fábrica 1", "Fábrica 2"],
-    familia1: ["Família 1.1", "Família 1.2"],
-    familia2: ["Família 2.1", "Família 2.2"],
-    produto: ["VIOLÃO 12323", "VIOLÃO 344334", "VIOLÃO TRTRTRR"],
-    tipo: ["REAL", "REVISÃO", "ORÇAMENTO"],
-    ano: ["2024", "2025", "2026"]
-  };
-
-  const handleSelect = (type: string, value: string) => {
-    setSelectedValues(prev => ({ ...prev, [type]: value }));
-    onFilterChange(type, value);
-    setOpenStates(prev => ({ ...prev, [type]: false }));
-  };
-
-  const renderCombobox = (type: string, label: string, options: string[]) => {
-    const isOpen = openStates[type] || false;
-    const selectedValue = selectedValues[type] || "";
-
-    return (
-      <div key={type} className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">{label}</label>
-        <Popover 
-          open={isOpen} 
-          onOpenChange={(open) => setOpenStates(prev => ({ ...prev, [type]: open }))}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={isOpen}
-              className="w-full justify-between text-left font-normal"
-            >
-              {selectedValue || `Selecione ${label.toLowerCase()}`}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
-            <Command shouldFilter={true}>
-              <CommandInput 
-                placeholder={`Pesquisar ${label.toLowerCase()}...`} 
-              />
-              <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
-              <CommandGroup>
-                {options.map((option) => (
-                  <CommandItem
-                    key={`${type}-${option}`}
-                    value={option}
-                    onSelect={() => handleSelect(type, option)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedValue === option ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  };
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
-      {Object.entries(filterOptions).map(([type, options]) => 
-        renderCombobox(
-          type,
-          type.charAt(0).toUpperCase() + type.slice(1),
-          options
-        )
-      )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Empresa</label>
+        <Select onValueChange={(value) => onFilterChange('empresa', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a empresa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="empresa1">Empresa 1</SelectItem>
+            <SelectItem value="empresa2">Empresa 2</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Marca</label>
+        <Select onValueChange={(value) => onFilterChange('marca', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a marca" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="marca1">Marca 1</SelectItem>
+            <SelectItem value="marca2">Marca 2</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Fábrica</label>
+        <Select onValueChange={(value) => onFilterChange('fabrica', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a fábrica" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fabrica1">Fábrica 1</SelectItem>
+            <SelectItem value="fabrica2">Fábrica 2</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Família 1</label>
+        <Select onValueChange={(value) => onFilterChange('familia1', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a família 1" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="familia1_1">Família 1.1</SelectItem>
+            <SelectItem value="familia1_2">Família 1.2</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Família 2</label>
+        <Select onValueChange={(value) => onFilterChange('familia2', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a família 2" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="familia2_1">Família 2.1</SelectItem>
+            <SelectItem value="familia2_2">Família 2.2</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Produto</label>
+        <Select onValueChange={(value) => onFilterChange('produto', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="VIOLÃO 12323">VIOLÃO 12323</SelectItem>
+            <SelectItem value="VIOLÃO 344334">VIOLÃO 344334</SelectItem>
+            <SelectItem value="VIOLÃO TRTRTRR">VIOLÃO TRTRTRR</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Tipo</label>
+        <Select onValueChange={(value) => onFilterChange('tipo', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="REAL">REAL</SelectItem>
+            <SelectItem value="REVISÃO">REVISÃO</SelectItem>
+            <SelectItem value="ORÇAMENTO">ORÇAMENTO</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Ano</label>
+        <Select onValueChange={(value) => onFilterChange('ano', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o ano" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2024">2024</SelectItem>
+            <SelectItem value="2025">2025</SelectItem>
+            <SelectItem value="2026">2026</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 };
