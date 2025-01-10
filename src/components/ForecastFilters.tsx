@@ -1,24 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
+  const [openStates, setOpenStates] = useState<{ [key: string]: boolean }>({});
+  const [selectedValues, setSelectedValues] = useState<{ [key: string]: string[] }>({});
+
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
+    let newValues: string[];
+    
     if (value === 'all') {
-      onFilterChange(filterType, checked ? allValues : []);
+      newValues = checked ? allValues : [];
     } else {
-      onFilterChange(filterType, checked ? [value] : []);
+      const currentValues = selectedValues[filterType] || [];
+      if (checked) {
+        newValues = [...currentValues, value];
+      } else {
+        newValues = currentValues.filter(v => v !== value);
+      }
     }
+    
+    setSelectedValues(prev => ({
+      ...prev,
+      [filterType]: newValues
+    }));
+    onFilterChange(filterType, newValues);
   };
 
   const renderFilterGroup = (
@@ -26,54 +43,86 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     filterType: string, 
     options: { value: string; label: string }[]
   ) => {
+    const selectedCount = selectedValues[filterType]?.length || 0;
+    const allSelected = selectedCount === options.length;
+    const someSelected = selectedCount > 0 && selectedCount < options.length;
+
     return (
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-slate-700">{label}</label>
-        <div className="space-y-2 rounded-md border p-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id={`${filterType}-all`}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange(
-                  filterType, 
-                  'all', 
-                  checked as boolean, 
-                  options.map(opt => opt.value)
-                )
-              }
-            />
-            <label 
-              htmlFor={`${filterType}-all`}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Selecionar Todos
-            </label>
+      <Popover open={openStates[filterType]} onOpenChange={(open) => 
+        setOpenStates(prev => ({ ...prev, [filterType]: open }))
+      }>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-full justify-between border-slate-200 bg-white hover:bg-slate-100"
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm text-slate-900">{label}</span>
+              {selectedCount > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
+                  {selectedCount}
+                </span>
+              )}
+            </div>
+            {openStates[filterType] ? (
+              <ChevronUp className="h-4 w-4 opacity-50" />
+            ) : (
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-0" align="start">
+          <div className="p-2 border-b">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id={`${filterType}-all`}
+                checked={allSelected}
+                indeterminate={someSelected}
+                onCheckedChange={(checked) => 
+                  handleCheckboxChange(
+                    filterType, 
+                    'all', 
+                    checked as boolean, 
+                    options.map(opt => opt.value)
+                  )
+                }
+              />
+              <label 
+                htmlFor={`${filterType}-all`}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Selecionar Todos
+              </label>
+            </div>
           </div>
-          <div className="space-y-2">
-            {options.map((option) => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`${filterType}-${option.value}`}
-                  onCheckedChange={(checked) => 
-                    handleCheckboxChange(filterType, option.value, checked as boolean, [])
-                  }
-                />
-                <label 
-                  htmlFor={`${filterType}-${option.value}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {option.label}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          <ScrollArea className="h-[200px] p-2">
+            <div className="space-y-2">
+              {options.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`${filterType}-${option.value}`}
+                    checked={selectedValues[filterType]?.includes(option.value)}
+                    onCheckedChange={(checked) => 
+                      handleCheckboxChange(filterType, option.value, checked as boolean, [])
+                    }
+                  />
+                  <label 
+                    htmlFor={`${filterType}-${option.value}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {option.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
     );
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
       {renderFilterGroup('Empresa', 'empresa', [
         { value: 'empresa1', label: 'Empresa 1' },
         { value: 'empresa2', label: 'Empresa 2' },
