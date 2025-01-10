@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ForecastTable from '@/components/ForecastTable';
 import ForecastFilters from '@/components/ForecastFilters';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,9 @@ interface Filters {
   ano: string[];
 }
 
-const Index = () => {
+const queryClient = new QueryClient();
+
+const IndexContent = () => {
   const [filters, setFilters] = useState<Filters>({
     empresa: [],
     marca: [],
@@ -41,10 +44,8 @@ const Index = () => {
     setShowFilters(!showFilters);
   };
 
-  // Lista de produtos para exibir
   const produtos = ['VIOLÃO 12323', 'VIOLÃO 344334', 'VIOLÃO TRTRTRR'];
 
-  // Função para verificar se um produto deve ser exibido com base nos filtros
   const shouldShowProduct = (produto: string) => {
     if (filters.produto.length > 0 && !filters.produto.includes(produto)) {
       return false;
@@ -114,6 +115,14 @@ const Index = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Index = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <IndexContent />
+    </QueryClientProvider>
   );
 };
 

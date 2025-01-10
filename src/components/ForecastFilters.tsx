@@ -77,7 +77,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <Checkbox 
                 id={`${filterType}-all`}
                 checked={allSelected}
-                indeterminate={someSelected}
                 onCheckedChange={(checked) => 
                   handleCheckboxChange(
                     filterType, 
