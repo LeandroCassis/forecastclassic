@@ -35,7 +35,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [openStates, setOpenStates] = useState<OpenStates>({});
   const [selectedValues, setSelectedValues] = useState<SelectedValues>({});
 
-  // Ensure filterOptions is properly typed and initialized
+  // Initialize filterOptions with default values
   const filterOptions: FilterOptions = {
     empresa: ["Empresa 1", "Empresa 2"],
     marca: ["Marca 1", "Marca 2"],
@@ -58,7 +58,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     const selectedValue = selectedValues[type] || "";
 
     return (
-      <div className="space-y-2">
+      <div key={type} className="space-y-2">
         <label className="text-sm font-medium text-slate-700">{label}</label>
         <Popover 
           open={isOpen} 
@@ -76,7 +76,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0">
-            <Command>
+            <Command shouldFilter={true}>
               <CommandInput 
                 placeholder={`Pesquisar ${label.toLowerCase()}...`} 
               />
@@ -84,7 +84,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <CommandGroup>
                 {options.map((option) => (
                   <CommandItem
-                    key={option}
+                    key={`${type}-${option}`}
                     value={option}
                     onSelect={() => handleSelect(type, option)}
                   >
