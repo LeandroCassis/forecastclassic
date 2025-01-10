@@ -8,9 +8,15 @@ interface ForecastData {
   valores: { [key: string]: number };
 }
 
+interface ForecastTableProps {
+  produto: string;
+  anoFiltro?: string;
+  tipoFiltro?: string;
+}
+
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
+const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const [data, setData] = useState<ForecastData[]>([
     {
       ano: 2024,
@@ -52,6 +58,17 @@ const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
     console.log('Value updated:', { ano, tipo, month, value });
   };
 
+  // Filtra os dados com base nos filtros de ano e tipo
+  const filteredData = data.filter(row => {
+    if (anoFiltro && row.ano.toString() !== anoFiltro) {
+      return false;
+    }
+    if (tipoFiltro && row.tipo !== tipoFiltro) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="rounded-md border border-slate-200 overflow-x-auto">
       <Table>
@@ -66,7 +83,7 @@ const ForecastTable: React.FC<{ produto: string }> = ({ produto }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row, index) => {
+          {filteredData.map((row, index) => {
             const isEditable = row.tipo === 'REVISÃO';
             const total = Object.values(row.valores).reduce((sum, val) => sum + val, 0);
             

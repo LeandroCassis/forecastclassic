@@ -30,6 +30,17 @@ const Index = () => {
     setShowFilters(!showFilters);
   };
 
+  // Lista de produtos para exibir
+  const produtos = ['VIOLÃO 12323', 'VIOLÃO 344334', 'VIOLÃO TRTRTRR'];
+
+  // Função para verificar se um produto deve ser exibido com base nos filtros
+  const shouldShowProduct = (produto: string) => {
+    if (filters.produto && filters.produto !== produto) {
+      return false;
+    }
+    return true;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-4">
       <div className="max-w-[95%] mx-auto space-y-4">
@@ -65,24 +76,24 @@ const Index = () => {
           {filters.produto ? (
             <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
               <h2 className="text-lg font-medium text-slate-700 mb-3">{filters.produto}</h2>
-              <ForecastTable produto={filters.produto} />
+              <ForecastTable 
+                produto={filters.produto} 
+                anoFiltro={filters.ano} 
+                tipoFiltro={filters.tipo}
+              />
             </div>
           ) : (
             <>
-              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-                <h2 className="text-lg font-medium text-slate-700 mb-3">VIOLÃO 12323</h2>
-                <ForecastTable produto="VIOLÃO 12323" />
-              </div>
-              
-              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-                <h2 className="text-lg font-medium text-slate-700 mb-3">VIOLÃO 344334</h2>
-                <ForecastTable produto="VIOLÃO 344334" />
-              </div>
-              
-              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-                <h2 className="text-lg font-medium text-slate-700 mb-3">VIOLÃO TRTRTRR</h2>
-                <ForecastTable produto="VIOLÃO TRTRTRR" />
-              </div>
+              {produtos.map(produto => shouldShowProduct(produto) && (
+                <div key={produto} className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
+                  <h2 className="text-lg font-medium text-slate-700 mb-3">{produto}</h2>
+                  <ForecastTable 
+                    produto={produto} 
+                    anoFiltro={filters.ano} 
+                    tipoFiltro={filters.tipo}
+                  />
+                </div>
+              ))}
             </>
           )}
         </div>
