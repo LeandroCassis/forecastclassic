@@ -80,6 +80,20 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       </div>
 
       <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-700">Produto</label>
+        <Select onValueChange={(value) => onFilterChange('produto', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="VIOLÃO 12323">VIOLÃO 12323</SelectItem>
+            <SelectItem value="VIOLÃO 344334">VIOLÃO 344334</SelectItem>
+            <SelectItem value="VIOLÃO TRTRTRR">VIOLÃO TRTRTRR</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
         <label className="text-sm font-medium text-slate-700">Tipo</label>
         <Select onValueChange={(value) => onFilterChange('tipo', value)}>
           <SelectTrigger>
