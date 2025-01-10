@@ -66,7 +66,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <CommandInput placeholder={`Pesquisar ${label.toLowerCase()}...`} />
               <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
               <CommandGroup>
-                {options.map((option) => (
+                {(options || []).map((option) => (
                   <CommandItem
                     key={option}
                     value={option}
