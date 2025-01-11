@@ -226,6 +226,15 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   const getValue = (ano: number, id_tipo: number, month: string) => {
     const key = `${ano}-${id_tipo}`;
+    const yearConfig = monthConfigurations[ano] || {};
+    const monthConfig = yearConfig[month];
+    
+    // If the month is realized and this is a "REVISÃO" row, get the value from "REALIZADO"
+    if (monthConfig?.realizado && id_tipo === 2) { // Assuming id_tipo 2 is "REVISÃO" and 1 is "REALIZADO"
+      const realizedKey = `${ano}-1`; // id_tipo 1 for "REALIZADO"
+      return forecastValues?.[realizedKey]?.[month] ?? 0;
+    }
+    
     return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
   };
 
