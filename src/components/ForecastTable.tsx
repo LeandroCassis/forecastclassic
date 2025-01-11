@@ -35,7 +35,6 @@ const closedMonths: { [key: string]: { [key: string]: boolean } } = {
   }
 };
 
-// Distribution percentages for open months
 const distributionPercentages: { [key: string]: { [key: string]: number } } = {
   '2025': {
     'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
@@ -145,7 +144,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     const numericValue = parseFloat(value) || 0;
     const key = `${ano}-${id_tipo}`;
     
-    // Update local state immediately
     setLocalValues(prev => ({
       ...prev,
       [key]: {
@@ -192,6 +190,16 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         
         const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
+        
+        // Update both local state and database
+        setLocalValues(prev => ({
+          ...prev,
+          [key]: {
+            ...(prev[key] || {}),
+            [month]: newValue
+          }
+        }));
+        
         updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
     });
@@ -216,6 +224,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
   };
 
+  const calculateTotal = (ano: number, id_tipo: number) => {
+    const key = `${ano}-${id_tipo}`;
+    return months.reduce((sum, month) => {
+      return sum + (getValue(ano, id_tipo, month) || 0);
+    }, 0);
+  };
+
   return (
     <div className="rounded-md border border-table-border overflow-x-auto">
       <Table>
@@ -232,14 +247,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         <TableBody>
           {filteredGrupos.map((grupo, index) => {
             const isEditable = grupo.tipo === 'REVISÃO';
-            const key = `${grupo.ano}-${grupo.id_tipo}`;
-            const valores = forecastValues?.[key] || {};
-            const total = Object.values(valores).reduce((sum: number, val: number) => sum + (val || 0), 0);
+            const total = calculateTotal(grupo.ano, grupo.id_tipo);
             const isEvenRow = index % 2 === 0;
             
             return (
               <TableRow 
-                key={key}
+                key={`${grupo.ano}-${grupo.id_tipo}`}
                 className={`
                   ${isEvenRow ? 'bg-table-row' : 'bg-table-altRow'}
                   hover:bg-slate-200 transition-colors
