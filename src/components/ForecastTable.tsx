@@ -70,11 +70,11 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       }
     },
     {
-      ano: 2024,
-      tipo: 'REVISÃO',
+      ano: 2025,
+      tipo: 'REAL',
       valores: {
-        JAN: 110, FEV: 160, MAR: 210, ABR: 190, MAI: 230, JUN: 250,
-        JUL: 270, AGO: 290, SET: 310, OUT: 330, NOV: 350, DEZ: 370
+        JAN: 115, FEV: 165, MAR: 215, ABR: 195, MAI: 235, JUN: 255,
+        JUL: 275, AGO: 295, SET: 315, OUT: 335, NOV: 355, DEZ: 375
       }
     },
     {
