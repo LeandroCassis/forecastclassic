@@ -70,8 +70,8 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       }
     },
     {
-      ano: 2025,
-      tipo: 'REAL',
+      ano: 2024,
+      tipo: 'REVISÃO',
       valores: {
         JAN: 110, FEV: 160, MAR: 210, ABR: 190, MAI: 230, JUN: 250,
         JUL: 270, AGO: 290, SET: 310, OUT: 330, NOV: 350, DEZ: 370
