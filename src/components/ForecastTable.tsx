@@ -35,10 +35,34 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     },
     {
       ano: 2025,
+      tipo: 'REVISÃO',
+      valores: {
+        JAN: 115, FEV: 165, MAR: 215, ABR: 195, MAI: 235, JUN: 255,
+        JUL: 275, AGO: 295, SET: 315, OUT: 335, NOV: 355, DEZ: 375
+      }
+    },
+    {
+      ano: 2025,
       tipo: 'ORÇAMENTO',
       valores: {
         JAN: 120, FEV: 170, MAR: 220, ABR: 200, MAI: 240, JUN: 260,
         JUL: 280, AGO: 300, SET: 320, OUT: 340, NOV: 360, DEZ: 380
+      }
+    },
+    {
+      ano: 2026,
+      tipo: 'REVISÃO',
+      valores: {
+        JAN: 125, FEV: 175, MAR: 225, ABR: 205, MAI: 245, JUN: 265,
+        JUL: 285, AGO: 305, SET: 325, OUT: 345, NOV: 365, DEZ: 385
+      }
+    },
+    {
+      ano: 2026,
+      tipo: 'ORÇAMENTO',
+      valores: {
+        JAN: 130, FEV: 180, MAR: 230, ABR: 210, MAI: 250, JUN: 270,
+        JUL: 290, AGO: 310, SET: 330, OUT: 350, NOV: 370, DEZ: 390
       }
     }
   ]);
@@ -75,12 +99,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       <Table>
         <TableHeader>
           <TableRow className="bg-table-header hover:bg-table-header">
-            <TableHead className="text-white font-semibold w-[80px] text-left">ANO</TableHead>
-            <TableHead className="text-white font-semibold w-[100px] text-left">TIPO</TableHead>
+            <TableHead className="text-white font-semibold w-[80px] text-left py-2">ANO</TableHead>
+            <TableHead className="text-white font-semibold w-[100px] text-left py-2">TIPO</TableHead>
             {months.map(month => (
-              <TableHead key={month} className="text-white font-semibold text-center">{month}</TableHead>
+              <TableHead key={month} className="text-white font-semibold text-center py-2">{month}</TableHead>
             ))}
-            <TableHead className="text-white font-semibold text-center">TOTAL</TableHead>
+            <TableHead className="text-white font-semibold text-center py-2">TOTAL</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -97,8 +121,8 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                   hover:bg-slate-200 transition-colors
                 `}
               >
-                <TableCell className="font-medium text-left">{row.ano}</TableCell>
-                <TableCell className="text-left">{row.tipo}</TableCell>
+                <TableCell className="font-medium text-left py-1">{row.ano}</TableCell>
+                <TableCell className="text-left py-1">{row.tipo}</TableCell>
                 {months.map(month => (
                   <TableCell key={month} className="text-center p-0">
                     {isEditable ? (
@@ -106,16 +130,16 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                         type="number"
                         value={row.valores[month]}
                         onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
-                        className="w-full h-full p-2 text-center bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        className="w-full h-full py-1 text-center bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
                     ) : (
-                      <div className="p-2">
+                      <div className="py-1">
                         {row.valores[month].toLocaleString('pt-BR')}
                       </div>
                     )}
                   </TableCell>
                 ))}
-                <TableCell className="text-center font-semibold">
+                <TableCell className="text-center font-semibold py-1">
                   {total.toLocaleString('pt-BR')}
                 </TableCell>
               </TableRow>
