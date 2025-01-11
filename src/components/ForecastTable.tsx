@@ -191,7 +191,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
         
-        // Update both local state and database
         setLocalValues(prev => ({
           ...prev,
           [key]: {
@@ -225,10 +224,9 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   };
 
   const calculateTotal = (ano: number, id_tipo: number) => {
-    const key = `${ano}-${id_tipo}`;
-    return months.reduce((sum, month) => {
+    return Math.round(months.reduce((sum, month) => {
       return sum + (getValue(ano, id_tipo, month) || 0);
-    }, 0);
+    }, 0));
   };
 
   return (
