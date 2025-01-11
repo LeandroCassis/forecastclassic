@@ -54,18 +54,18 @@ const IndexContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-4">
-      <div className="max-w-[95%] mx-auto space-y-4">
-        <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-sm p-4 border border-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-6">
+      <div className="max-w-[95%] mx-auto space-y-6">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-slate-100">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-xl font-semibold text-slate-700">Forecast e Vendas</h1>
-              <p className="text-sm text-slate-500">Visualização e edição de previsões de vendas</p>
+              <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">Forecast e Vendas</h1>
+              <p className="text-sm text-slate-500 mt-1">Visualização e edição de previsões de vendas</p>
             </div>
             <Button
               variant="outline"
               onClick={toggleFilters}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl hover:bg-slate-100 transition-colors"
             >
               {showFilters ? (
                 <>
@@ -84,12 +84,12 @@ const IndexContent = () => {
         
         {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           {filters.produto.length > 0 ? (
             <>
               {filters.produto.map(produto => (
-                <div key={produto} className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-                  <h2 className="text-lg font-medium text-slate-700 mb-3">{produto}</h2>
+                <div key={produto} className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-100">
+                  <h2 className="text-xl font-medium text-slate-800 mb-4">{produto}</h2>
                   <ForecastTable 
                     produto={produto} 
                     anoFiltro={filters.ano}
@@ -101,8 +101,8 @@ const IndexContent = () => {
           ) : (
             <>
               {produtos.map(produto => shouldShowProduct(produto) && (
-                <div key={produto} className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-slate-100">
-                  <h2 className="text-lg font-medium text-slate-700 mb-3">{produto}</h2>
+                <div key={produto} className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-100">
+                  <h2 className="text-xl font-medium text-slate-800 mb-4">{produto}</h2>
                   <ForecastTable 
                     produto={produto} 
                     anoFiltro={filters.ano}

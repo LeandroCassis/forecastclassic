@@ -34,7 +34,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   const queryClient = useQueryClient();
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
 
-  // Fetch product ID based on produto name
   const { data: productData } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
@@ -212,18 +211,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     });
   };
 
-  if (!grupos || !monthConfigurations) return <div>Loading...</div>;
-
-  const filteredGrupos = grupos.filter(grupo => {
-    if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
-      return false;
-    }
-    if (tipoFiltro && tipoFiltro.length > 0 && !tipoFiltro.includes(grupo.tipo)) {
-      return false;
-    }
-    return true;
-  });
-
   const getValue = (ano: number, id_tipo: number, month: string) => {
     const key = `${ano}-${id_tipo}`;
     return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
@@ -235,78 +222,99 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }, 0));
   };
 
+  if (!grupos || !monthConfigurations) return (
+    <div className="flex items-center justify-center h-40 bg-white/50 backdrop-blur-sm rounded-2xl">
+      <div className="text-slate-500">Carregando dados...</div>
+    </div>
+  );
+
+  const filteredGrupos = grupos.filter(grupo => {
+    if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
+      return false;
+    }
+    if (tipoFiltro && tipoFiltro.length > 0 && !tipoFiltro.includes(grupo.tipo)) {
+      return false;
+    }
+    return true;
+  });
+
   return (
-    <div className="rounded-md border border-table-border overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-table-header hover:bg-table-header">
-            <TableHead className="text-white font-semibold w-[80px] text-left py-1 border-r border-table-border">ANO</TableHead>
-            <TableHead className="text-white font-semibold w-[100px] text-left py-1 border-r border-table-border">TIPO</TableHead>
-            {months.map(month => (
-              <TableHead key={month} className="text-white font-semibold text-right py-1 border-r border-table-border">{month}</TableHead>
-            ))}
-            <TableHead className="text-white font-semibold text-right py-1">TOTAL</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredGrupos.map((grupo, index) => {
-            const isEditable = grupo.tipo === 'REVISÃO';
-            const total = calculateTotal(grupo.ano, grupo.id_tipo);
-            const isEvenRow = index % 2 === 0;
-            const yearConfig = monthConfigurations[grupo.ano] || {};
-            
-            return (
-              <TableRow 
-                key={`${grupo.ano}-${grupo.id_tipo}`}
-                className={`
-                  ${isEvenRow ? 'bg-table-row' : 'bg-table-altRow'}
-                  hover:bg-slate-200 transition-colors
-                `}
-              >
-                <TableCell className="font-medium text-left py-1 border-r border-table-border">{grupo.ano}</TableCell>
-                <TableCell className="text-left py-1 border-r border-table-border">{grupo.tipo}</TableCell>
-                {months.map(month => {
-                  const isRealized = yearConfig[month]?.realizado;
-                  return (
-                    <TableCell 
-                      key={month} 
-                      className={`text-right p-0 border-r border-table-border ${isRealized ? 'bg-gray-100' : ''}`}
-                    >
-                      {isEditable && !isRealized ? (
-                        <input
-                          type="number"
-                          value={getValue(grupo.ano, grupo.id_tipo, month)}
-                          onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
-                          onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
-                          className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
-                        />
-                      ) : (
-                        <div className="py-1 px-2">
-                          {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                        </div>
-                      )}
-                    </TableCell>
-                  );
-                })}
-                <TableCell className="text-right p-0">
-                  {isEditable ? (
-                    <input
-                      type="number"
-                      value={total}
-                      onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
-                      className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2 font-semibold"
-                    />
-                  ) : (
-                    <div className="py-1 px-2 font-semibold">
-                      {total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white/50 backdrop-blur-sm">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-700">
+              <TableHead className="text-white font-medium w-[80px] text-left py-3 border-r border-blue-500/30">ANO</TableHead>
+              <TableHead className="text-white font-medium w-[100px] text-left py-3 border-r border-blue-500/30">TIPO</TableHead>
+              {months.map(month => (
+                <TableHead key={month} className="text-white font-medium text-right py-3 border-r border-blue-500/30">{month}</TableHead>
+              ))}
+              <TableHead className="text-white font-medium text-right py-3">TOTAL</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredGrupos.map((grupo, index) => {
+              const isEditable = grupo.tipo === 'REVISÃO';
+              const total = calculateTotal(grupo.ano, grupo.id_tipo);
+              const isEvenRow = index % 2 === 0;
+              const yearConfig = monthConfigurations[grupo.ano] || {};
+              
+              return (
+                <TableRow 
+                  key={`${grupo.ano}-${grupo.id_tipo}`}
+                  className={`
+                    ${isEvenRow ? 'bg-white/80' : 'bg-slate-50/80'}
+                    hover:bg-slate-100/80 transition-colors
+                  `}
+                >
+                  <TableCell className="font-medium text-left py-2 border-r border-slate-200">{grupo.ano}</TableCell>
+                  <TableCell className="text-left py-2 border-r border-slate-200">{grupo.tipo}</TableCell>
+                  {months.map(month => {
+                    const isRealized = yearConfig[month]?.realizado;
+                    return (
+                      <TableCell 
+                        key={month} 
+                        className={`text-right p-0 border-r border-slate-200 
+                          ${isRealized ? 'bg-slate-100/80' : ''}
+                          ${isEditable && !isRealized ? 'bg-blue-50/50' : ''}
+                        `}
+                      >
+                        {isEditable && !isRealized ? (
+                          <input
+                            type="number"
+                            value={getValue(grupo.ano, grupo.id_tipo, month)}
+                            onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
+                            onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
+                            className="w-full h-full py-2 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 transition-all"
+                          />
+                        ) : (
+                          <div className="py-2 px-3">
+                            {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right p-0">
+                    {isEditable ? (
+                      <input
+                        type="number"
+                        value={total}
+                        onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
+                        className="w-full h-full py-2 text-right bg-blue-50/50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
+                      />
+                    ) : (
+                      <div className="py-2 px-3 font-medium">
+                        {total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
