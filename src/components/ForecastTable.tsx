@@ -37,13 +37,18 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   const { data: productData } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
+      console.log('Fetching product data for:', produto);
       const { data, error } = await supabase
         .from('produtos')
-        .select('id')
+        .select('codigo')
         .eq('produto', produto)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching product:', error);
+        throw error;
+      }
+      console.log('Found product data:', data);
       return data;
     }
   });
@@ -93,17 +98,22 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   // Fetch forecast values
   const { data: forecastValues } = useQuery({
-    queryKey: ['forecast_values', productData?.id],
+    queryKey: ['forecast_values', productData?.codigo],
     queryFn: async () => {
-      if (!productData?.id) return {};
+      if (!productData?.codigo) return {};
       
+      console.log('Fetching forecast values for product codigo:', productData.codigo);
       const { data, error } = await supabase
         .from('forecast_values')
         .select('*')
-        .eq('produto_id', productData.id);
+        .eq('produto_codigo', productData.codigo);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching forecast values:', error);
+        throw error;
+      }
       
+      console.log('Fetched forecast values:', data);
       const transformedData: { [key: string]: { [key: string]: number } } = {};
       
       data.forEach(row => {
@@ -116,19 +126,31 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       
       return transformedData;
     },
-    enabled: !!productData?.id
+    enabled: !!productData?.codigo
   });
 
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
-      if (!productData?.id) throw new Error('Product ID not found');
+      if (!productData?.codigo) {
+        console.error('Product codigo not found');
+        throw new Error('Product codigo not found');
+      }
+
+      console.log('Updating forecast value:', {
+        produto_codigo: productData.codigo,
+        ano,
+        tipo,
+        id_tipo,
+        mes,
+        valor
+      });
 
       const { error } = await supabase
         .from('forecast_values')
         .upsert(
           {
-            produto_id: productData.id,
+            produto_codigo: productData.codigo,
             ano,
             tipo,
             id_tipo,
@@ -136,12 +158,15 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             valor
           },
           {
-            onConflict: 'produto_id,ano,id_tipo,mes',
+            onConflict: 'produto_codigo,ano,id_tipo,mes',
             ignoreDuplicates: false
           }
         );
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating forecast value:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
