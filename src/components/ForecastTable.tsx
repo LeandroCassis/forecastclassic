@@ -115,19 +115,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
 
-      // Record the edit first
-      await supabase
-        .from('forecast_edits')
-        .insert({
-          produto_id: productData.id,
-          mes,
-          ano,
-          tipo,
-          valor_anterior: forecastValues?.[`${ano}-${id_tipo}`]?.[mes] || null,
-          valor_novo: valor
-        });
-
-      // Then update the forecast value using upsert with onConflict
       const { error } = await supabase
         .from('forecast_values')
         .upsert(

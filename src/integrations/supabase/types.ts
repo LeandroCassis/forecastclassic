@@ -9,50 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      forecast_edits: {
-        Row: {
-          ano: number
-          created_at: string | null
-          edit_time: string | null
-          id: string
-          mes: string
-          produto_id: string | null
-          tipo: string
-          valor_anterior: number | null
-          valor_novo: number | null
-        }
-        Insert: {
-          ano: number
-          created_at?: string | null
-          edit_time?: string | null
-          id?: string
-          mes: string
-          produto_id?: string | null
-          tipo: string
-          valor_anterior?: number | null
-          valor_novo?: number | null
-        }
-        Update: {
-          ano?: number
-          created_at?: string | null
-          edit_time?: string | null
-          id?: string
-          mes?: string
-          produto_id?: string | null
-          tipo?: string
-          valor_anterior?: number | null
-          valor_novo?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forecast_edits_produto_id_fkey"
-            columns: ["produto_id"]
-            isOneToOne: false
-            referencedRelation: "produtos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       forecast_values: {
         Row: {
           ano: number
