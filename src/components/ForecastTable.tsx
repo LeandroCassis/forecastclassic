@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +24,6 @@ interface Grupo {
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-// Add closed months configuration
 const closedMonths: { [key: string]: { [key: string]: boolean } } = {
   '2025': {
     'JAN': true, 'FEV': true, 'MAR': true, 'ABR': false, 'MAI': false, 'JUN': false,
@@ -50,6 +49,7 @@ const distributionPercentages: { [key: string]: { [key: string]: number } } = {
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const queryClient = useQueryClient();
+  const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
 
   // Fetch product ID based on produto name
   const { data: productData } = useQuery({
@@ -94,7 +94,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       
       if (error) throw error;
       
-      // Transform the data into the format we need
       const transformedData: { [key: string]: { [key: string]: number } } = {};
       
       data.forEach(row => {
@@ -144,8 +143,26 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
-    updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: numericValue });
-    console.log('Value updated:', { ano, tipo, id_tipo, month, value });
+    const key = `${ano}-${id_tipo}`;
+    
+    // Update local state immediately
+    setLocalValues(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        [month]: numericValue
+      }
+    }));
+  };
+
+  const handleBlur = (ano: number, tipo: string, id_tipo: number, month: string) => {
+    const key = `${ano}-${id_tipo}`;
+    const value = localValues[key]?.[month];
+    
+    if (value !== undefined) {
+      updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: value });
+      console.log('Value saved to database:', { ano, tipo, id_tipo, month, value });
+    }
   };
 
   const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
@@ -158,7 +175,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
-    // Calculate open months percentage sum and distribute values
     const openMonthsPercentageSum = Object.entries(yearClosedMonths)
       .reduce((sum, [month, isClosed]) => !isClosed ? sum + yearPercentages[month] : sum, 0);
 
@@ -194,6 +210,11 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }
     return true;
   });
+
+  const getValue = (ano: number, id_tipo: number, month: string) => {
+    const key = `${ano}-${id_tipo}`;
+    return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
+  };
 
   return (
     <div className="rounded-md border border-table-border overflow-x-auto">
@@ -231,13 +252,14 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                     {isEditable ? (
                       <input
                         type="number"
-                        value={valores[month] || 0}
+                        value={getValue(grupo.ano, grupo.id_tipo, month)}
                         onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
+                        onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
                         className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
                       />
                     ) : (
                       <div className="py-1 px-2">
-                        {(valores[month] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                       </div>
                     )}
                   </TableCell>
