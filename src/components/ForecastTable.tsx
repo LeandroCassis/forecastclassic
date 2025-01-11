@@ -97,7 +97,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   };
 
   const handleTotalChange = (ano: number, tipo: string, totalValue: string) => {
-    const numericTotal = parseFloat(totalValue) || 0;
+    const numericTotal = Number(parseFloat(totalValue).toFixed(1)) || 0;
     const yearPercentages = distributionPercentages[ano.toString()];
     
     if (!yearPercentages) {
@@ -118,7 +118,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       }
       return row;
     }));
-    console.log('Total updated and distributed:', { ano, tipo, totalValue });
+    console.log('Total updated and distributed:', { ano, tipo, totalValue: numericTotal });
   };
 
   const filteredData = data.filter(row => {
@@ -147,7 +147,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         <TableBody>
           {filteredData.map((row, index) => {
             const isEditable = row.tipo === 'REVISÃO';
-            const total = Object.values(row.valores).reduce((sum, val) => sum + val, 0);
+            const total = Number(Object.values(row.valores).reduce((sum, val) => sum + val, 0).toFixed(1));
             const isEvenRow = index % 2 === 0;
             
             return (
