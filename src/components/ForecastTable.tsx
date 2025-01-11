@@ -223,7 +223,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   };
 
   if (!grupos || !monthConfigurations) return (
-    <div className="flex items-center justify-center h-40 bg-white/50 backdrop-blur-sm rounded-2xl">
+    <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
       <div className="text-slate-500">Carregando dados...</div>
     </div>
   );
@@ -239,7 +239,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   });
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white/50 backdrop-blur-sm">
+    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -256,27 +256,24 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             {filteredGrupos.map((grupo, index) => {
               const isEditable = grupo.tipo === 'REVISÃO';
               const total = calculateTotal(grupo.ano, grupo.id_tipo);
-              const isEvenRow = index % 2 === 0;
               const yearConfig = monthConfigurations[grupo.ano] || {};
               
               return (
                 <TableRow 
                   key={`${grupo.ano}-${grupo.id_tipo}`}
-                  className={`
-                    ${isEvenRow ? 'bg-white/80' : 'bg-slate-50/80'}
-                    hover:bg-slate-100/80 transition-colors
-                  `}
+                  className="hover:bg-slate-50 transition-colors"
                 >
-                  <TableCell className="font-medium text-left py-2 border-r border-slate-200">{grupo.ano}</TableCell>
-                  <TableCell className="text-left py-2 border-r border-slate-200">{grupo.tipo}</TableCell>
+                  <TableCell className="font-medium text-left py-2 border-r border-slate-200 bg-white">{grupo.ano}</TableCell>
+                  <TableCell className="text-left py-2 border-r border-slate-200 bg-white">{grupo.tipo}</TableCell>
                   {months.map(month => {
                     const isRealized = yearConfig[month]?.realizado;
+                    const shouldBeYellow = isRealized && grupo.tipo === 'REVISÃO';
                     return (
                       <TableCell 
                         key={month} 
                         className={`text-right p-0 border-r border-slate-200 
-                          ${isRealized ? 'bg-slate-100/80' : ''}
-                          ${isEditable && !isRealized ? 'bg-blue-50/50' : ''}
+                          ${shouldBeYellow ? 'bg-yellow-50' : 'bg-white'}
+                          ${isEditable && !isRealized ? 'bg-blue-50' : ''}
                         `}
                       >
                         {isEditable && !isRealized ? (
@@ -295,13 +292,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                       </TableCell>
                     );
                   })}
-                  <TableCell className="text-right p-0">
+                  <TableCell className="text-right p-0 bg-white">
                     {isEditable ? (
                       <input
                         type="number"
                         value={total}
                         onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
-                        className="w-full h-full py-2 text-right bg-blue-50/50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
+                        className="w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
                       />
                     ) : (
                       <div className="py-2 px-3 font-medium">
