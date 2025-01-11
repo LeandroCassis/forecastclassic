@@ -15,7 +15,39 @@ interface ForecastTableProps {
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-// Distribution percentages by month and year
+// Add closed months configuration
+const closedMonths: { [key: string]: { [key: string]: boolean } } = {
+  '2025': {
+    'JAN': true,
+    'FEV': true,
+    'MAR': true,
+    'ABR': false,
+    'MAI': false,
+    'JUN': false,
+    'JUL': false,
+    'AGO': false,
+    'SET': false,
+    'OUT': false,
+    'NOV': false,
+    'DEZ': false
+  },
+  '2026': {
+    'JAN': false,
+    'FEV': false,
+    'MAR': false,
+    'ABR': false,
+    'MAI': false,
+    'JUN': false,
+    'JUL': false,
+    'AGO': false,
+    'SET': false,
+    'OUT': false,
+    'NOV': false,
+    'DEZ': false
+  }
+};
+
+// Distribution percentages for open months
 const distributionPercentages: { [key: string]: { [key: string]: number } } = {
   '2025': {
     'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
@@ -98,6 +130,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   const handleTotalChange = (ano: number, tipo: string, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
+    const yearClosedMonths = closedMonths[ano.toString()];
     const yearPercentages = distributionPercentages[ano.toString()];
     
     if (!yearPercentages) {
@@ -105,19 +138,43 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
-    setData(prevData => prevData.map(row => {
-      if (row.ano === ano && row.tipo === tipo) {
-        const newValores = { ...row.valores };
-        months.forEach(month => {
-          newValores[month] = Number((numericTotal * yearPercentages[month]).toFixed(1));
-        });
-        return {
-          ...row,
-          valores: newValores
-        };
-      }
-      return row;
-    }));
+    setData(prevData => {
+      // First, find the REAL data for the same year
+      const realData = prevData.find(row => row.ano === ano && row.tipo === 'REAL');
+      
+      // Calculate the sum of percentages for open months
+      const openMonthsPercentageSum = Object.entries(yearClosedMonths)
+        .reduce((sum, [month, isClosed]) => !isClosed ? sum + yearPercentages[month] : sum, 0);
+
+      return prevData.map(row => {
+        if (row.ano === ano && row.tipo === tipo) {
+          const newValores = { ...row.valores };
+          
+          // Calculate values for each month
+          months.forEach(month => {
+            if (yearClosedMonths[month]) {
+              // For closed months, use the REAL value if available
+              newValores[month] = realData ? realData.valores[month] : row.valores[month];
+            } else {
+              // For open months, distribute the remaining value according to percentages
+              const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
+              const remainingTotal = numericTotal - Object.entries(yearClosedMonths)
+                .reduce((sum, [m, isClosed]) => {
+                  return isClosed && realData ? sum + realData.valores[m] : sum;
+                }, 0);
+              newValores[month] = Number((remainingTotal * adjustedPercentage).toFixed(1));
+            }
+          });
+          
+          return {
+            ...row,
+            valores: newValores
+          };
+        }
+        return row;
+      });
+    });
+    
     console.log('Total updated and distributed:', { ano, tipo, totalValue: numericTotal });
   };
 
