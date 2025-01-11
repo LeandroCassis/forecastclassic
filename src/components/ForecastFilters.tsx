@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -6,11 +6,8 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from '@tanstack/react-query';
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
@@ -19,55 +16,6 @@ interface ForecastFiltersProps {
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
   const [openStates, setOpenStates] = useState<{ [key: string]: boolean }>({});
   const [selectedValues, setSelectedValues] = useState<{ [key: string]: string[] }>({});
-  const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
-
-  // Fetch produtos data
-  const { data: produtosData } = useQuery({
-    queryKey: ['produtos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('empresa, marca, fabrica, familia1, familia2, produto')
-        .order('empresa');
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch grupos data
-  const { data: gruposData } = useQuery({
-    queryKey: ['grupos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('grupos')
-        .select('tipo, ano')
-        .order('ano');
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const getUniqueValues = (field: string): { value: string; label: string }[] => {
-    if (!produtosData) return [];
-    
-    const uniqueSet = new Set(produtosData.map(item => item[field as keyof typeof item]));
-    return Array.from(uniqueSet).map(value => ({
-      value: value as string,
-      label: value as string
-    }));
-  };
-
-  const getGruposValues = (field: 'tipo' | 'ano'): { value: string; label: string }[] => {
-    if (!gruposData) return [];
-    
-    const uniqueSet = new Set(gruposData.map(item => String(item[field])));
-    return Array.from(uniqueSet).map(value => ({
-      value: value,
-      label: value
-    }));
-  };
 
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
     let newValues: string[];
@@ -90,27 +38,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     onFilterChange(filterType, newValues);
   };
 
-  const handleSearchChange = (filterType: string, value: string) => {
-    setSearchTerms(prev => ({
-      ...prev,
-      [filterType]: value.toLowerCase()
-    }));
-  };
-
-  const filterOptions = (options: { value: string; label: string }[], filterType: string) => {
-    const searchTerm = searchTerms[filterType] || '';
-    return options.filter(option => 
-      option.label.toLowerCase().includes(searchTerm)
-    );
-  };
-
   const renderFilterGroup = (
     label: string, 
     filterType: string, 
     options: { value: string; label: string }[]
   ) => {
     const selectedCount = selectedValues[filterType]?.length || 0;
-    const filteredOptions = filterOptions(options, filterType);
     const allSelected = selectedCount === options.length;
     const someSelected = selectedCount > 0 && selectedCount < options.length;
 
@@ -161,21 +94,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               </label>
             </div>
           </div>
-          <div className="p-2 border-b">
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-slate-500" />
-              <Input
-                type="text"
-                placeholder="Buscar..."
-                value={searchTerms[filterType] || ''}
-                onChange={(e) => handleSearchChange(filterType, e.target.value)}
-                className="h-8"
-              />
-            </div>
-          </div>
           <ScrollArea className="h-[200px] p-2">
             <div className="space-y-2">
-              {filteredOptions.map((option) => (
+              {options.map((option) => (
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`${filterType}-${option.value}`}
@@ -201,14 +122,48 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
-      {renderFilterGroup('Empresa', 'empresa', getUniqueValues('empresa'))}
-      {renderFilterGroup('Marca', 'marca', getUniqueValues('marca'))}
-      {renderFilterGroup('Fábrica', 'fabrica', getUniqueValues('fabrica'))}
-      {renderFilterGroup('Família 1', 'familia1', getUniqueValues('familia1'))}
-      {renderFilterGroup('Família 2', 'familia2', getUniqueValues('familia2'))}
-      {renderFilterGroup('Produto', 'produto', getUniqueValues('produto'))}
-      {renderFilterGroup('Tipo', 'tipo', getGruposValues('tipo'))}
-      {renderFilterGroup('Ano', 'ano', getGruposValues('ano'))}
+      {renderFilterGroup('Empresa', 'empresa', [
+        { value: 'empresa1', label: 'Empresa 1' },
+        { value: 'empresa2', label: 'Empresa 2' },
+      ])}
+
+      {renderFilterGroup('Marca', 'marca', [
+        { value: 'marca1', label: 'Marca 1' },
+        { value: 'marca2', label: 'Marca 2' },
+      ])}
+
+      {renderFilterGroup('Fábrica', 'fabrica', [
+        { value: 'fabrica1', label: 'Fábrica 1' },
+        { value: 'fabrica2', label: 'Fábrica 2' },
+      ])}
+
+      {renderFilterGroup('Família 1', 'familia1', [
+        { value: 'familia1_1', label: 'Família 1.1' },
+        { value: 'familia1_2', label: 'Família 1.2' },
+      ])}
+
+      {renderFilterGroup('Família 2', 'familia2', [
+        { value: 'familia2_1', label: 'Família 2.1' },
+        { value: 'familia2_2', label: 'Família 2.2' },
+      ])}
+
+      {renderFilterGroup('Produto', 'produto', [
+        { value: 'VIOLÃO 12323', label: 'VIOLÃO 12323' },
+        { value: 'VIOLÃO 344334', label: 'VIOLÃO 344334' },
+        { value: 'VIOLÃO TRTRTRR', label: 'VIOLÃO TRTRTRR' },
+      ])}
+
+      {renderFilterGroup('Tipo', 'tipo', [
+        { value: 'REAL', label: 'REAL' },
+        { value: 'REVISÃO', label: 'REVISÃO' },
+        { value: 'ORÇAMENTO', label: 'ORÇAMENTO' },
+      ])}
+
+      {renderFilterGroup('Ano', 'ano', [
+        { value: '2024', label: '2024' },
+        { value: '2025', label: '2025' },
+        { value: '2026', label: '2026' },
+      ])}
     </div>
   );
 };
