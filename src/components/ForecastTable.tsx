@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from "@/components/ui/use-toast";
 
 interface ForecastData {
   ano: number;
@@ -32,6 +33,7 @@ const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', '
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
 
   // Fetch product ID
@@ -39,22 +41,31 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     queryKey: ['product', produto],
     queryFn: async () => {
       console.log('Fetching product data for:', produto);
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('id')
-        .eq('produto', produto)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching product:', error);
+      try {
+        const { data, error } = await supabase
+          .from('produtos')
+          .select('id')
+          .eq('produto', produto)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching product:', error);
+          toast({
+            title: "Error fetching product",
+            description: error.message,
+            variant: "destructive",
+          });
+          throw error;
+        }
+        console.log('Product data:', data);
+        return data;
+      } catch (error) {
+        console.error('Error in product query:', error);
         throw error;
       }
-      console.log('Product data:', data);
-      return data;
     }
   });
 
-  // Fetch all grupos
   const { data: grupos, error: gruposError } = useQuery({
     queryKey: ['grupos'],
     queryFn: async () => {
@@ -117,30 +128,42 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       }
       
       console.log('Fetching forecast values for product ID:', productData.id);
-      const { data, error } = await supabase
-        .from('forecast_values')
-        .select('*')
-        .eq('produto_id', productData.id);
-      
-      if (error) {
-        console.error('Error fetching forecast values:', error);
+      try {
+        const { data, error } = await supabase
+          .from('forecast_values')
+          .select('*')
+          .eq('produto_id', productData.id);
+        
+        if (error) {
+          console.error('Error fetching forecast values:', error);
+          toast({
+            title: "Error fetching forecast values",
+            description: error.message,
+            variant: "destructive",
+          });
+          throw error;
+        }
+        
+        const transformedData: { [key: string]: { [key: string]: number } } = {};
+        
+        data.forEach(row => {
+          const key = `${row.ano}-${row.id_tipo}`;
+          if (!transformedData[key]) {
+            transformedData[key] = {};
+          }
+          transformedData[key][row.mes] = row.valor;
+        });
+        
+        console.log('Transformed forecast values:', transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error('Error in forecast values query:', error);
         throw error;
       }
-      
-      const transformedData: { [key: string]: { [key: string]: number } } = {};
-      
-      data.forEach(row => {
-        const key = `${row.ano}-${row.id_tipo}`;
-        if (!transformedData[key]) {
-          transformedData[key] = {};
-        }
-        transformedData[key][row.mes] = row.valor;
-      });
-      
-      console.log('Transformed forecast values:', transformedData);
-      return transformedData;
     },
-    enabled: !!productData?.id
+    enabled: !!productData?.id,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const updateMutation = useMutation({
@@ -362,5 +385,3 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     </div>
   );
 };
-
-export default ForecastTable;
