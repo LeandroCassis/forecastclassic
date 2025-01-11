@@ -99,12 +99,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       <Table>
         <TableHeader>
           <TableRow className="bg-table-header hover:bg-table-header">
-            <TableHead className="text-white font-semibold w-[80px] text-left py-2">ANO</TableHead>
-            <TableHead className="text-white font-semibold w-[100px] text-left py-2">TIPO</TableHead>
+            <TableHead className="text-white font-semibold w-[80px] text-left py-1 border-r border-table-border">ANO</TableHead>
+            <TableHead className="text-white font-semibold w-[100px] text-left py-1 border-r border-table-border">TIPO</TableHead>
             {months.map(month => (
-              <TableHead key={month} className="text-white font-semibold text-center py-2">{month}</TableHead>
+              <TableHead key={month} className="text-white font-semibold text-right py-1 border-r border-table-border">{month}</TableHead>
             ))}
-            <TableHead className="text-white font-semibold text-center py-2">TOTAL</TableHead>
+            <TableHead className="text-white font-semibold text-right py-1">TOTAL</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -121,26 +121,26 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                   hover:bg-slate-200 transition-colors
                 `}
               >
-                <TableCell className="font-medium text-left py-1">{row.ano}</TableCell>
-                <TableCell className="text-left py-1">{row.tipo}</TableCell>
+                <TableCell className="font-medium text-left py-1 border-r border-table-border">{row.ano}</TableCell>
+                <TableCell className="text-left py-1 border-r border-table-border">{row.tipo}</TableCell>
                 {months.map(month => (
-                  <TableCell key={month} className="text-center p-0">
+                  <TableCell key={month} className="text-right p-0 border-r border-table-border">
                     {isEditable ? (
                       <input
                         type="number"
                         value={row.valores[month]}
                         onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
-                        className="w-full h-full py-1 text-center bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
                       />
                     ) : (
-                      <div className="py-1">
-                        {row.valores[month].toLocaleString('pt-BR')}
+                      <div className="py-1 px-2">
+                        {row.valores[month].toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                       </div>
                     )}
                   </TableCell>
                 ))}
-                <TableCell className="text-center font-semibold py-1">
-                  {total.toLocaleString('pt-BR')}
+                <TableCell className="text-right font-semibold py-1 px-2">
+                  {total.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                 </TableCell>
               </TableRow>
             );
