@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from "@/components/ui/use-toast";
 
 interface ForecastData {
   ano: number;
@@ -33,74 +32,49 @@ const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', '
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
 
-  // Fetch product ID
-  const { data: productData, error: productError } = useQuery({
+  const { data: productData } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
-      console.log('Fetching product data for:', produto);
-      try {
-        const { data, error } = await supabase
-          .from('produtos')
-          .select('id')
-          .eq('produto', produto)
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Error fetching product:', error);
-          toast({
-            title: "Error fetching product",
-            description: error.message,
-            variant: "destructive",
-          });
-          throw error;
-        }
-        console.log('Product data:', data);
-        return data;
-      } catch (error) {
-        console.error('Error in product query:', error);
-        throw error;
-      }
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id')
+        .eq('produto', produto)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
     }
   });
 
-  const { data: grupos, error: gruposError } = useQuery({
+  // Fetch all grupos
+  const { data: grupos } = useQuery({
     queryKey: ['grupos'],
     queryFn: async () => {
-      console.log('Fetching grupos');
       const { data, error } = await supabase
         .from('grupos')
         .select('*')
         .order('ano')
         .order('id_tipo');
       
-      if (error) {
-        console.error('Error fetching grupos:', error);
-        throw error;
-      }
-      console.log('Grupos data:', data);
+      if (error) throw error;
       return data as Grupo[];
     }
   });
 
   // Fetch month configurations
-  const { data: monthConfigurations, error: monthConfigError } = useQuery({
+  const { data: monthConfigurations } = useQuery({
     queryKey: ['month_configurations'],
     queryFn: async () => {
-      console.log('Fetching month configurations');
       const { data, error } = await supabase
         .from('month_configurations')
         .select('*')
         .order('ano')
         .order('mes');
       
-      if (error) {
-        console.error('Error fetching month configurations:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
+
       const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
       data.forEach(config => {
         if (!configByYear[config.ano]) {
@@ -113,59 +87,39 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         };
       });
       
-      console.log('Month configurations:', configByYear);
       return configByYear;
     }
   });
 
   // Fetch forecast values
-  const { data: forecastValues, error: forecastError } = useQuery({
+  const { data: forecastValues } = useQuery({
     queryKey: ['forecast_values', productData?.id],
     queryFn: async () => {
-      if (!productData?.id) {
-        console.log('No product ID available yet');
-        return {};
-      }
+      if (!productData?.id) return {};
       
-      console.log('Fetching forecast values for product ID:', productData.id);
-      try {
-        const { data, error } = await supabase
-          .from('forecast_values')
-          .select('*')
-          .eq('produto_id', productData.id);
-        
-        if (error) {
-          console.error('Error fetching forecast values:', error);
-          toast({
-            title: "Error fetching forecast values",
-            description: error.message,
-            variant: "destructive",
-          });
-          throw error;
+      const { data, error } = await supabase
+        .from('forecast_values')
+        .select('*')
+        .eq('produto_id', productData.id);
+      
+      if (error) throw error;
+      
+      const transformedData: { [key: string]: { [key: string]: number } } = {};
+      
+      data.forEach(row => {
+        const key = `${row.ano}-${row.id_tipo}`;
+        if (!transformedData[key]) {
+          transformedData[key] = {};
         }
-        
-        const transformedData: { [key: string]: { [key: string]: number } } = {};
-        
-        data.forEach(row => {
-          const key = `${row.ano}-${row.id_tipo}`;
-          if (!transformedData[key]) {
-            transformedData[key] = {};
-          }
-          transformedData[key][row.mes] = row.valor;
-        });
-        
-        console.log('Transformed forecast values:', transformedData);
-        return transformedData;
-      } catch (error) {
-        console.error('Error in forecast values query:', error);
-        throw error;
-      }
+        transformedData[key][row.mes] = row.valor;
+      });
+      
+      return transformedData;
     },
-    enabled: !!productData?.id,
-    retry: 3,
-    retryDelay: 1000,
+    enabled: !!productData?.id
   });
 
+  // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
@@ -216,18 +170,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }
   };
 
-  const calculateRealizedTotal = (ano: number, id_tipo: number) => {
-    const yearConfig = monthConfigurations?.[ano] || {};
-    const key = `${ano}-${id_tipo}`;
-    
-    return months.reduce((sum, month) => {
-      if (yearConfig[month]?.realizado) {
-        return sum + (getValue(ano, id_tipo, month) || 0);
-      }
-      return sum;
-    }, 0);
-  };
-
   const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
     const yearConfig = monthConfigurations?.[ano] || {};
@@ -237,12 +179,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
-    // Calculate the minimum allowed total based on realized months
-    const realizedTotal = calculateRealizedTotal(ano, id_tipo);
-    
-    // If the entered total is less than the realized total, use the realized total instead
-    const effectiveTotal = Math.max(numericTotal, realizedTotal);
-    
     const openMonthsPercentageSum = Object.values(yearConfig)
       .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
@@ -250,10 +186,18 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       const monthConfig = yearConfig[month];
       if (monthConfig && !monthConfig.realizado) {
         const adjustedPercentage = monthConfig.pct_atual / openMonthsPercentageSum;
-        const remainingTotal = effectiveTotal - realizedTotal;
+        const key = `${ano}-${id_tipo}`;
+        const closedMonthsTotal = Object.entries(yearConfig)
+          .reduce((sum, [m, config]) => {
+            if (config.realizado && forecastValues && forecastValues[key] && forecastValues[key][m]) {
+              return sum + (forecastValues[key][m] || 0);
+            }
+            return sum;
+          }, 0);
+        
+        const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
         
-        const key = `${ano}-${id_tipo}`;
         setLocalValues(prev => ({
           ...prev,
           [key]: {
@@ -278,23 +222,11 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }, 0));
   };
 
-  // Show error states if any query fails
-  if (productError || gruposError || monthConfigError || forecastError) {
-    return (
-      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
-        <div className="text-red-500">Error loading data. Please try again later.</div>
-      </div>
-    );
-  }
-
-  // Show loading state if any query is still loading
-  if (!grupos || !monthConfigurations) {
-    return (
-      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
-        <div className="text-slate-500">Carregando dados...</div>
-      </div>
-    );
-  }
+  if (!grupos || !monthConfigurations) return (
+    <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
+      <div className="text-slate-500">Carregando dados...</div>
+    </div>
+  );
 
   const filteredGrupos = grupos.filter(grupo => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
@@ -321,11 +253,10 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGrupos.map((grupo) => {
+            {filteredGrupos.map((grupo, index) => {
               const isEditable = grupo.tipo === 'REVISÃO';
               const total = calculateTotal(grupo.ano, grupo.id_tipo);
               const yearConfig = monthConfigurations[grupo.ano] || {};
-              const realizedTotal = calculateRealizedTotal(grupo.ano, grupo.id_tipo);
               
               return (
                 <TableRow 
@@ -366,7 +297,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                       <input
                         type="number"
                         value={total}
-                        min={realizedTotal}
                         onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
                         className="w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
                       />
