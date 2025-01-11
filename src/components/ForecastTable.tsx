@@ -170,6 +170,18 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }
   };
 
+  const calculateRealizedTotal = (ano: number, id_tipo: number) => {
+    const yearConfig = monthConfigurations?.[ano] || {};
+    const key = `${ano}-${id_tipo}`;
+    
+    return months.reduce((sum, month) => {
+      if (yearConfig[month]?.realizado) {
+        return sum + (getValue(ano, id_tipo, month) || 0);
+      }
+      return sum;
+    }, 0);
+  };
+
   const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
     const yearConfig = monthConfigurations?.[ano] || {};
@@ -179,6 +191,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
+    // Calculate the minimum allowed total based on realized months
+    const realizedTotal = calculateRealizedTotal(ano, id_tipo);
+    
+    // If the entered total is less than the realized total, use the realized total instead
+    const effectiveTotal = Math.max(numericTotal, realizedTotal);
+    
     const openMonthsPercentageSum = Object.values(yearConfig)
       .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
@@ -186,18 +204,10 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       const monthConfig = yearConfig[month];
       if (monthConfig && !monthConfig.realizado) {
         const adjustedPercentage = monthConfig.pct_atual / openMonthsPercentageSum;
-        const key = `${ano}-${id_tipo}`;
-        const closedMonthsTotal = Object.entries(yearConfig)
-          .reduce((sum, [m, config]) => {
-            if (config.realizado && forecastValues && forecastValues[key] && forecastValues[key][m]) {
-              return sum + (forecastValues[key][m] || 0);
-            }
-            return sum;
-          }, 0);
-        
-        const remainingTotal = numericTotal - closedMonthsTotal;
+        const remainingTotal = effectiveTotal - realizedTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
         
+        const key = `${ano}-${id_tipo}`;
         setLocalValues(prev => ({
           ...prev,
           [key]: {
@@ -253,10 +263,11 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGrupos.map((grupo, index) => {
+            {filteredGrupos.map((grupo) => {
               const isEditable = grupo.tipo === 'REVISÃO';
               const total = calculateTotal(grupo.ano, grupo.id_tipo);
               const yearConfig = monthConfigurations[grupo.ano] || {};
+              const realizedTotal = calculateRealizedTotal(grupo.ano, grupo.id_tipo);
               
               return (
                 <TableRow 
@@ -297,6 +308,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                       <input
                         type="number"
                         value={total}
+                        min={realizedTotal}
                         onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
                         className="w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
                       />
