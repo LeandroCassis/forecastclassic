@@ -9,7 +9,139 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      forecast_edits: {
+        Row: {
+          ano: number
+          created_at: string | null
+          edit_time: string | null
+          id: string
+          mes: string
+          produto_id: string | null
+          tipo: string
+          valor_anterior: number | null
+          valor_novo: number | null
+        }
+        Insert: {
+          ano: number
+          created_at?: string | null
+          edit_time?: string | null
+          id?: string
+          mes: string
+          produto_id?: string | null
+          tipo: string
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Update: {
+          ano?: number
+          created_at?: string | null
+          edit_time?: string | null
+          id?: string
+          mes?: string
+          produto_id?: string | null
+          tipo?: string
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forecast_edits_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forecast_values: {
+        Row: {
+          ano: number
+          data_registro: string | null
+          id: string
+          mes: string
+          produto_id: string | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          ano: number
+          data_registro?: string | null
+          id?: string
+          mes: string
+          produto_id?: string | null
+          tipo: string
+          valor: number
+        }
+        Update: {
+          ano?: number
+          data_registro?: string | null
+          id?: string
+          mes?: string
+          produto_id?: string | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forecast_values_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          codigo: string
+          created_at: string | null
+          data_atualizacao_fob: string | null
+          empresa: string
+          fabrica: string
+          familia1: string
+          familia2: string
+          fob: number | null
+          id: string
+          indice: number | null
+          marca: string
+          preco_venda: number | null
+          produto: string
+          updated_at: string | null
+        }
+        Insert: {
+          codigo: string
+          created_at?: string | null
+          data_atualizacao_fob?: string | null
+          empresa: string
+          fabrica: string
+          familia1: string
+          familia2: string
+          fob?: number | null
+          id?: string
+          indice?: number | null
+          marca: string
+          preco_venda?: number | null
+          produto: string
+          updated_at?: string | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string | null
+          data_atualizacao_fob?: string | null
+          empresa?: string
+          fabrica?: string
+          familia1?: string
+          familia2?: string
+          fob?: number | null
+          id?: string
+          indice?: number | null
+          marca?: string
+          preco_venda?: number | null
+          produto?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

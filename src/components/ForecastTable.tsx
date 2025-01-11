@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ForecastData {
   ano: number;
@@ -18,32 +20,12 @@ const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', '
 // Add closed months configuration
 const closedMonths: { [key: string]: { [key: string]: boolean } } = {
   '2025': {
-    'JAN': true,
-    'FEV': true,
-    'MAR': true,
-    'ABR': false,
-    'MAI': false,
-    'JUN': false,
-    'JUL': false,
-    'AGO': false,
-    'SET': false,
-    'OUT': false,
-    'NOV': false,
-    'DEZ': false
+    'JAN': true, 'FEV': true, 'MAR': true, 'ABR': false, 'MAI': false, 'JUN': false,
+    'JUL': false, 'AGO': false, 'SET': false, 'OUT': false, 'NOV': false, 'DEZ': false
   },
   '2026': {
-    'JAN': false,
-    'FEV': false,
-    'MAR': false,
-    'ABR': false,
-    'MAI': false,
-    'JUN': false,
-    'JUL': false,
-    'AGO': false,
-    'SET': false,
-    'OUT': false,
-    'NOV': false,
-    'DEZ': false
+    'JAN': false, 'FEV': false, 'MAR': false, 'ABR': false, 'MAI': false, 'JUN': false,
+    'JUL': false, 'AGO': false, 'SET': false, 'OUT': false, 'NOV': false, 'DEZ': false
   }
 };
 
@@ -60,71 +42,126 @@ const distributionPercentages: { [key: string]: { [key: string]: number } } = {
 };
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
-  const [data, setData] = useState<ForecastData[]>([
-    {
-      ano: 2024,
-      tipo: 'REAL',
-      valores: {
-        JAN: 100, FEV: 150, MAR: 200, ABR: 180, MAI: 220, JUN: 240,
-        JUL: 260, AGO: 280, SET: 300, OUT: 320, NOV: 340, DEZ: 360
-      }
-    },
-    {
-      ano: 2025,
-      tipo: 'REAL',
-      valores: {
-        JAN: 115, FEV: 165, MAR: 215, ABR: 195, MAI: 235, JUN: 255,
-        JUL: 275, AGO: 295, SET: 315, OUT: 335, NOV: 355, DEZ: 375
-      }
-    },
-    {
-      ano: 2025,
-      tipo: 'REVISÃO',
-      valores: {
-        JAN: 115, FEV: 165, MAR: 215, ABR: 195, MAI: 235, JUN: 255,
-        JUL: 275, AGO: 295, SET: 315, OUT: 335, NOV: 355, DEZ: 375
-      }
-    },
-    {
-      ano: 2025,
-      tipo: 'ORÇAMENTO',
-      valores: {
-        JAN: 120, FEV: 170, MAR: 220, ABR: 200, MAI: 240, JUN: 260,
-        JUL: 280, AGO: 300, SET: 320, OUT: 340, NOV: 360, DEZ: 380
-      }
-    },
-    {
-      ano: 2026,
-      tipo: 'REVISÃO',
-      valores: {
-        JAN: 125, FEV: 175, MAR: 225, ABR: 205, MAI: 245, JUN: 265,
-        JUL: 285, AGO: 305, SET: 325, OUT: 345, NOV: 365, DEZ: 385
-      }
-    },
-    {
-      ano: 2026,
-      tipo: 'ORÇAMENTO',
-      valores: {
-        JAN: 130, FEV: 180, MAR: 230, ABR: 210, MAI: 250, JUN: 270,
-        JUL: 290, AGO: 310, SET: 330, OUT: 350, NOV: 370, DEZ: 390
-      }
+  const queryClient = useQueryClient();
+
+  // Fetch product ID based on produto name
+  const { data: productData } = useQuery({
+    queryKey: ['product', produto],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id')
+        .eq('produto', produto)
+        .single();
+      
+      if (error) throw error;
+      return data;
     }
-  ]);
+  });
+
+  // Fetch forecast values
+  const { data: forecastValues } = useQuery({
+    queryKey: ['forecast_values', productData?.id],
+    queryFn: async () => {
+      if (!productData?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('forecast_values')
+        .select('*')
+        .eq('produto_id', productData.id);
+      
+      if (error) throw error;
+      
+      // Transform the data into the format we need
+      const transformedData: ForecastData[] = [];
+      const groupedData: { [key: string]: { [key: string]: { [key: string]: number } } } = {};
+      
+      data.forEach(row => {
+        if (!groupedData[row.ano]) {
+          groupedData[row.ano] = {};
+        }
+        if (!groupedData[row.ano][row.tipo]) {
+          groupedData[row.ano][row.tipo] = {};
+        }
+        groupedData[row.ano][row.tipo][row.mes] = row.valor;
+      });
+      
+      Object.entries(groupedData).forEach(([ano, tipoData]) => {
+        Object.entries(tipoData).forEach(([tipo, valores]) => {
+          transformedData.push({
+            ano: parseInt(ano),
+            tipo,
+            valores: { ...valores }
+          });
+        });
+      });
+      
+      return transformedData;
+    },
+    enabled: !!productData?.id
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ ano, tipo, mes, valor }: { ano: number, tipo: string, mes: string, valor: number }) => {
+      if (!productData?.id) throw new Error('Product ID not found');
+
+      // First, check if the value exists
+      const { data: existingData } = await supabase
+        .from('forecast_values')
+        .select('valor')
+        .eq('produto_id', productData.id)
+        .eq('ano', ano)
+        .eq('tipo', tipo)
+        .eq('mes', mes)
+        .maybeSingle();
+
+      // Record the edit
+      await supabase
+        .from('forecast_edits')
+        .insert({
+          produto_id: productData.id,
+          mes,
+          ano,
+          tipo,
+          valor_anterior: existingData?.valor,
+          valor_novo: valor
+        });
+
+      if (existingData) {
+        // Update existing value
+        const { error } = await supabase
+          .from('forecast_values')
+          .update({ valor })
+          .eq('produto_id', productData.id)
+          .eq('ano', ano)
+          .eq('tipo', tipo)
+          .eq('mes', mes);
+
+        if (error) throw error;
+      } else {
+        // Insert new value
+        const { error } = await supabase
+          .from('forecast_values')
+          .insert({
+            produto_id: productData.id,
+            ano,
+            tipo,
+            mes,
+            valor
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
+    }
+  });
 
   const handleValueChange = (ano: number, tipo: string, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
-    setData(prevData => prevData.map(row => {
-      if (row.ano === ano && row.tipo === tipo) {
-        return {
-          ...row,
-          valores: {
-            ...row.valores,
-            [month]: numericValue
-          }
-        };
-      }
-      return row;
-    }));
+    updateMutation.mutate({ ano, tipo, mes: month, valor: numericValue });
     console.log('Value updated:', { ano, tipo, month, value });
   };
 
@@ -138,47 +175,32 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
-    setData(prevData => {
-      // First, find the REAL data for the same year
-      const realData = prevData.find(row => row.ano === ano && row.tipo === 'REAL');
-      
-      // Calculate the sum of percentages for open months
-      const openMonthsPercentageSum = Object.entries(yearClosedMonths)
-        .reduce((sum, [month, isClosed]) => !isClosed ? sum + yearPercentages[month] : sum, 0);
+    // Calculate open months percentage sum and distribute values
+    const openMonthsPercentageSum = Object.entries(yearClosedMonths)
+      .reduce((sum, [month, isClosed]) => !isClosed ? sum + yearPercentages[month] : sum, 0);
 
-      return prevData.map(row => {
-        if (row.ano === ano && row.tipo === tipo) {
-          const newValores = { ...row.valores };
-          
-          // Calculate values for each month
-          months.forEach(month => {
-            if (yearClosedMonths[month]) {
-              // For closed months, use the REAL value if available
-              newValores[month] = realData ? realData.valores[month] : row.valores[month];
-            } else {
-              // For open months, distribute the remaining value according to percentages
-              const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
-              const remainingTotal = numericTotal - Object.entries(yearClosedMonths)
-                .reduce((sum, [m, isClosed]) => {
-                  return isClosed && realData ? sum + realData.valores[m] : sum;
-                }, 0);
-              newValores[month] = Number((remainingTotal * adjustedPercentage).toFixed(1));
+    months.forEach(month => {
+      if (!yearClosedMonths[month]) {
+        const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
+        const remainingTotal = numericTotal - Object.entries(yearClosedMonths)
+          .reduce((sum, [m, isClosed]) => {
+            if (isClosed && forecastValues) {
+              const realValue = forecastValues.find(row => 
+                row.ano === ano && row.tipo === 'REAL'
+              )?.valores[m];
+              return realValue ? sum + realValue : sum;
             }
-          });
-          
-          return {
-            ...row,
-            valores: newValores
-          };
-        }
-        return row;
-      });
+            return sum;
+          }, 0);
+        const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
+        updateMutation.mutate({ ano, tipo, mes: month, valor: newValue });
+      }
     });
     
     console.log('Total updated and distributed:', { ano, tipo, totalValue: numericTotal });
   };
 
-  const filteredData = data.filter(row => {
+  const filteredData = forecastValues?.filter(row => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(row.ano.toString())) {
       return false;
     }
@@ -186,7 +208,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return false;
     }
     return true;
-  });
+  }) || [];
 
   return (
     <div className="rounded-md border border-table-border overflow-x-auto">
@@ -222,13 +244,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                     {isEditable ? (
                       <input
                         type="number"
-                        value={row.valores[month]}
+                        value={row.valores[month] || 0}
                         onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
                         className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
                       />
                     ) : (
                       <div className="py-1 px-2">
-                        {row.valores[month].toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        {(row.valores[month] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                       </div>
                     )}
                   </TableCell>
