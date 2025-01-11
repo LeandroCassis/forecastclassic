@@ -58,6 +58,7 @@ export type Database = {
           ano: number
           data_registro: string | null
           id: string
+          id_tipo: number
           mes: string
           produto_id: string | null
           tipo: string
@@ -67,6 +68,7 @@ export type Database = {
           ano: number
           data_registro?: string | null
           id?: string
+          id_tipo: number
           mes: string
           produto_id?: string | null
           tipo: string
@@ -76,12 +78,20 @@ export type Database = {
           ano?: number
           data_registro?: string | null
           id?: string
+          id_tipo?: number
           mes?: string
           produto_id?: string | null
           tipo?: string
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "forecast_values_grupo_fk"
+            columns: ["ano", "id_tipo"]
+            isOneToOne: false
+            referencedRelation: "grupos"
+            referencedColumns: ["ano", "id_tipo"]
+          },
           {
             foreignKeyName: "forecast_values_produto_id_fkey"
             columns: ["produto_id"]
@@ -90,6 +100,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      grupos: {
+        Row: {
+          ano: number
+          created_at: string | null
+          id: number
+          id_tipo: number
+          tipo: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string | null
+          id?: number
+          id_tipo: number
+          tipo: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string | null
+          id?: number
+          id_tipo?: number
+          tipo?: string
+        }
+        Relationships: []
       }
       produtos: {
         Row: {

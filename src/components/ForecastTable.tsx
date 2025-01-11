@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 interface ForecastData {
   ano: number;
   tipo: string;
+  id_tipo: number;
   valores: { [key: string]: number };
 }
 
@@ -13,6 +14,12 @@ interface ForecastTableProps {
   produto: string;
   anoFiltro?: string[];
   tipoFiltro?: string[];
+}
+
+interface Grupo {
+  ano: number;
+  id_tipo: number;
+  tipo: string;
 }
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
@@ -52,10 +59,25 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         .from('produtos')
         .select('id')
         .eq('produto', produto)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Fetch all grupos
+  const { data: grupos } = useQuery({
+    queryKey: ['grupos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('grupos')
+        .select('*')
+        .order('ano')
+        .order('id_tipo');
+      
+      if (error) throw error;
+      return data as Grupo[];
     }
   });
 
@@ -73,27 +95,14 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       if (error) throw error;
       
       // Transform the data into the format we need
-      const transformedData: ForecastData[] = [];
-      const groupedData: { [key: string]: { [key: string]: { [key: string]: number } } } = {};
+      const transformedData: { [key: string]: { [key: string]: number } } = {};
       
       data.forEach(row => {
-        if (!groupedData[row.ano]) {
-          groupedData[row.ano] = {};
+        const key = `${row.ano}-${row.id_tipo}`;
+        if (!transformedData[key]) {
+          transformedData[key] = {};
         }
-        if (!groupedData[row.ano][row.tipo]) {
-          groupedData[row.ano][row.tipo] = {};
-        }
-        groupedData[row.ano][row.tipo][row.mes] = row.valor;
-      });
-      
-      Object.entries(groupedData).forEach(([ano, tipoData]) => {
-        Object.entries(tipoData).forEach(([tipo, valores]) => {
-          transformedData.push({
-            ano: parseInt(ano),
-            tipo,
-            valores: { ...valores }
-          });
-        });
+        transformedData[key][row.mes] = row.valor;
       });
       
       return transformedData;
@@ -103,7 +112,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ ano, tipo, mes, valor }: { ano: number, tipo: string, mes: string, valor: number }) => {
+    mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
 
       // First, check if the value exists
@@ -112,7 +121,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         .select('valor')
         .eq('produto_id', productData.id)
         .eq('ano', ano)
-        .eq('tipo', tipo)
+        .eq('id_tipo', id_tipo)
         .eq('mes', mes)
         .maybeSingle();
 
@@ -135,7 +144,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
           .update({ valor })
           .eq('produto_id', productData.id)
           .eq('ano', ano)
-          .eq('tipo', tipo)
+          .eq('id_tipo', id_tipo)
           .eq('mes', mes);
 
         if (error) throw error;
@@ -147,6 +156,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             produto_id: productData.id,
             ano,
             tipo,
+            id_tipo,
             mes,
             valor
           });
@@ -159,13 +169,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }
   });
 
-  const handleValueChange = (ano: number, tipo: string, month: string, value: string) => {
+  const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
-    updateMutation.mutate({ ano, tipo, mes: month, valor: numericValue });
-    console.log('Value updated:', { ano, tipo, month, value });
+    updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: numericValue });
+    console.log('Value updated:', { ano, tipo, id_tipo, month, value });
   };
 
-  const handleTotalChange = (ano: number, tipo: string, totalValue: string) => {
+  const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
     const yearClosedMonths = closedMonths[ano.toString()];
     const yearPercentages = distributionPercentages[ano.toString()];
@@ -184,31 +194,33 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
         const remainingTotal = numericTotal - Object.entries(yearClosedMonths)
           .reduce((sum, [m, isClosed]) => {
-            if (isClosed && forecastValues) {
-              const realValue = forecastValues.find(row => 
-                row.ano === ano && row.tipo === 'REAL'
-              )?.valores[m];
-              return realValue ? sum + realValue : sum;
+            if (isClosed) {
+              const key = `${ano}-${id_tipo}`;
+              return forecastValues && forecastValues[key] && forecastValues[key][m]
+                ? sum + forecastValues[key][m]
+                : sum;
             }
             return sum;
           }, 0);
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
-        updateMutation.mutate({ ano, tipo, mes: month, valor: newValue });
+        updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
     });
     
-    console.log('Total updated and distributed:', { ano, tipo, totalValue: numericTotal });
+    console.log('Total updated and distributed:', { ano, tipo, id_tipo, totalValue: numericTotal });
   };
 
-  const filteredData = forecastValues?.filter(row => {
-    if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(row.ano.toString())) {
+  if (!grupos) return <div>Loading...</div>;
+
+  const filteredGrupos = grupos.filter(grupo => {
+    if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
       return false;
     }
-    if (tipoFiltro && tipoFiltro.length > 0 && !tipoFiltro.includes(row.tipo)) {
+    if (tipoFiltro && tipoFiltro.length > 0 && !tipoFiltro.includes(grupo.tipo)) {
       return false;
     }
     return true;
-  }) || [];
+  });
 
   return (
     <div className="rounded-md border border-table-border overflow-x-auto">
@@ -224,33 +236,35 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.map((row, index) => {
-            const isEditable = row.tipo === 'REVISÃO';
-            const total = Math.round(Object.values(row.valores).reduce((sum, val) => sum + val, 0));
+          {filteredGrupos.map((grupo, index) => {
+            const isEditable = grupo.tipo === 'REVISÃO';
+            const key = `${grupo.ano}-${grupo.id_tipo}`;
+            const valores = forecastValues?.[key] || {};
+            const total = Math.round(Object.values(valores).reduce((sum, val) => sum + val, 0));
             const isEvenRow = index % 2 === 0;
             
             return (
               <TableRow 
-                key={`${row.ano}-${row.tipo}`}
+                key={key}
                 className={`
                   ${isEvenRow ? 'bg-table-row' : 'bg-table-altRow'}
                   hover:bg-slate-200 transition-colors
                 `}
               >
-                <TableCell className="font-medium text-left py-1 border-r border-table-border">{row.ano}</TableCell>
-                <TableCell className="text-left py-1 border-r border-table-border">{row.tipo}</TableCell>
+                <TableCell className="font-medium text-left py-1 border-r border-table-border">{grupo.ano}</TableCell>
+                <TableCell className="text-left py-1 border-r border-table-border">{grupo.tipo}</TableCell>
                 {months.map(month => (
                   <TableCell key={month} className="text-right p-0 border-r border-table-border">
                     {isEditable ? (
                       <input
                         type="number"
-                        value={row.valores[month] || 0}
-                        onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
+                        value={valores[month] || 0}
+                        onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
                         className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
                       />
                     ) : (
                       <div className="py-1 px-2">
-                        {(row.valores[month] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        {(valores[month] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                       </div>
                     )}
                   </TableCell>
@@ -260,7 +274,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                     <input
                       type="number"
                       value={total}
-                      onChange={(e) => handleTotalChange(row.ano, row.tipo, e.target.value)}
+                      onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
                       className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2 font-semibold"
                     />
                   ) : (
