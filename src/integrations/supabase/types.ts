@@ -81,6 +81,42 @@ export type Database = {
         }
         Relationships: []
       }
+      month_configurations: {
+        Row: {
+          ano: number
+          created_at: string | null
+          data: string
+          id: string
+          mes: string
+          pct_atual: number
+          pct_geral: number
+          realizado: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          ano: number
+          created_at?: string | null
+          data: string
+          id?: string
+          mes: string
+          pct_atual: number
+          pct_geral: number
+          realizado?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          ano?: number
+          created_at?: string | null
+          data?: string
+          id?: string
+          mes?: string
+          pct_atual?: number
+          pct_geral?: number
+          realizado?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           codigo: string

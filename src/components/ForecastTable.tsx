@@ -22,29 +22,13 @@ interface Grupo {
   tipo: string;
 }
 
+interface MonthConfiguration {
+  mes: string;
+  pct_atual: number;
+  realizado: boolean;
+}
+
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-
-const closedMonths: { [key: string]: { [key: string]: boolean } } = {
-  '2025': {
-    'JAN': true, 'FEV': true, 'MAR': true, 'ABR': false, 'MAI': false, 'JUN': false,
-    'JUL': false, 'AGO': false, 'SET': false, 'OUT': false, 'NOV': false, 'DEZ': false
-  },
-  '2026': {
-    'JAN': false, 'FEV': false, 'MAR': false, 'ABR': false, 'MAI': false, 'JUN': false,
-    'JUL': false, 'AGO': false, 'SET': false, 'OUT': false, 'NOV': false, 'DEZ': false
-  }
-};
-
-const distributionPercentages: { [key: string]: { [key: string]: number } } = {
-  '2025': {
-    'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
-    'JUL': 0.08, 'AGO': 0.08, 'SET': 0.08, 'OUT': 0.09, 'NOV': 0.08, 'DEZ': 0.05
-  },
-  '2026': {
-    'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
-    'JUL': 0.08, 'AGO': 0.08, 'SET': 0.08, 'OUT': 0.09, 'NOV': 0.08, 'DEZ': 0.05
-  }
-};
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const queryClient = useQueryClient();
@@ -77,6 +61,34 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       
       if (error) throw error;
       return data as Grupo[];
+    }
+  });
+
+  // Fetch month configurations
+  const { data: monthConfigurations } = useQuery({
+    queryKey: ['month_configurations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('month_configurations')
+        .select('*')
+        .order('ano')
+        .order('mes');
+      
+      if (error) throw error;
+
+      const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
+      data.forEach(config => {
+        if (!configByYear[config.ano]) {
+          configByYear[config.ano] = {};
+        }
+        configByYear[config.ano][config.mes] = {
+          mes: config.mes,
+          pct_atual: config.pct_atual,
+          realizado: config.realizado
+        };
+      });
+      
+      return configByYear;
     }
   });
 
@@ -130,10 +142,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
           }
         );
 
-      if (error) {
-        console.error('Error updating forecast value:', error);
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
@@ -159,30 +168,29 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     
     if (value !== undefined) {
       updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: value });
-      console.log('Value saved to database:', { ano, tipo, id_tipo, month, value });
     }
   };
 
   const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
-    const yearClosedMonths = closedMonths[ano.toString()];
-    const yearPercentages = distributionPercentages[ano.toString()];
+    const yearConfig = monthConfigurations?.[ano] || {};
     
-    if (!yearPercentages) {
-      console.log('No distribution percentages found for year:', ano);
+    if (!yearConfig) {
+      console.log('No month configurations found for year:', ano);
       return;
     }
 
-    const openMonthsPercentageSum = Object.entries(yearClosedMonths)
-      .reduce((sum, [month, isClosed]) => !isClosed ? sum + yearPercentages[month] : sum, 0);
+    const openMonthsPercentageSum = Object.values(yearConfig)
+      .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
     months.forEach(month => {
-      if (!yearClosedMonths[month]) {
-        const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
+      const monthConfig = yearConfig[month];
+      if (monthConfig && !monthConfig.realizado) {
+        const adjustedPercentage = monthConfig.pct_atual / openMonthsPercentageSum;
         const key = `${ano}-${id_tipo}`;
-        const closedMonthsTotal = Object.entries(yearClosedMonths)
-          .reduce((sum, [m, isClosed]) => {
-            if (isClosed && forecastValues && forecastValues[key] && forecastValues[key][m]) {
+        const closedMonthsTotal = Object.entries(yearConfig)
+          .reduce((sum, [m, config]) => {
+            if (config.realizado && forecastValues && forecastValues[key] && forecastValues[key][m]) {
               return sum + (forecastValues[key][m] || 0);
             }
             return sum;
@@ -202,11 +210,9 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
     });
-    
-    console.log('Total updated and distributed:', { ano, tipo, id_tipo, totalValue: numericTotal });
   };
 
-  if (!grupos) return <div>Loading...</div>;
+  if (!grupos || !monthConfigurations) return <div>Loading...</div>;
 
   const filteredGrupos = grupos.filter(grupo => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
@@ -247,6 +253,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             const isEditable = grupo.tipo === 'REVISÃO';
             const total = calculateTotal(grupo.ano, grupo.id_tipo);
             const isEvenRow = index % 2 === 0;
+            const yearConfig = monthConfigurations[grupo.ano] || {};
             
             return (
               <TableRow 
@@ -258,23 +265,29 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
               >
                 <TableCell className="font-medium text-left py-1 border-r border-table-border">{grupo.ano}</TableCell>
                 <TableCell className="text-left py-1 border-r border-table-border">{grupo.tipo}</TableCell>
-                {months.map(month => (
-                  <TableCell key={month} className="text-right p-0 border-r border-table-border">
-                    {isEditable ? (
-                      <input
-                        type="number"
-                        value={getValue(grupo.ano, grupo.id_tipo, month)}
-                        onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
-                        onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
-                        className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
-                      />
-                    ) : (
-                      <div className="py-1 px-2">
-                        {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                      </div>
-                    )}
-                  </TableCell>
-                ))}
+                {months.map(month => {
+                  const isRealized = yearConfig[month]?.realizado;
+                  return (
+                    <TableCell 
+                      key={month} 
+                      className={`text-right p-0 border-r border-table-border ${isRealized ? 'bg-gray-100' : ''}`}
+                    >
+                      {isEditable && !isRealized ? (
+                        <input
+                          type="number"
+                          value={getValue(grupo.ano, grupo.id_tipo, month)}
+                          onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
+                          onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
+                          className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2"
+                        />
+                      ) : (
+                        <div className="py-1 px-2">
+                          {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        </div>
+                      )}
+                    </TableCell>
+                  );
+                })}
                 <TableCell className="text-right p-0">
                   {isEditable ? (
                     <input
