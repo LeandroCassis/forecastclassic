@@ -15,6 +15,18 @@ interface ForecastTableProps {
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
+// Distribution percentages by month and year
+const distributionPercentages: { [key: string]: { [key: string]: number } } = {
+  '2025': {
+    'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
+    'JUL': 0.08, 'AGO': 0.08, 'SET': 0.08, 'OUT': 0.09, 'NOV': 0.08, 'DEZ': 0.05
+  },
+  '2026': {
+    'JAN': 0.06, 'FEV': 0.07, 'MAR': 0.08, 'ABR': 0.07, 'MAI': 0.19, 'JUN': 0.07,
+    'JUL': 0.08, 'AGO': 0.08, 'SET': 0.08, 'OUT': 0.09, 'NOV': 0.08, 'DEZ': 0.05
+  }
+};
+
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const [data, setData] = useState<ForecastData[]>([
     {
@@ -84,6 +96,31 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     console.log('Value updated:', { ano, tipo, month, value });
   };
 
+  const handleTotalChange = (ano: number, tipo: string, totalValue: string) => {
+    const numericTotal = parseFloat(totalValue) || 0;
+    const yearPercentages = distributionPercentages[ano.toString()];
+    
+    if (!yearPercentages) {
+      console.log('No distribution percentages found for year:', ano);
+      return;
+    }
+
+    setData(prevData => prevData.map(row => {
+      if (row.ano === ano && row.tipo === tipo) {
+        const newValores = { ...row.valores };
+        months.forEach(month => {
+          newValores[month] = Number((numericTotal * yearPercentages[month]).toFixed(1));
+        });
+        return {
+          ...row,
+          valores: newValores
+        };
+      }
+      return row;
+    }));
+    console.log('Total updated and distributed:', { ano, tipo, totalValue });
+  };
+
   const filteredData = data.filter(row => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(row.ano.toString())) {
       return false;
@@ -139,8 +176,19 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                     )}
                   </TableCell>
                 ))}
-                <TableCell className="text-right font-semibold py-1 px-2">
-                  {total.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                <TableCell className="text-right p-0">
+                  {isEditable ? (
+                    <input
+                      type="number"
+                      value={total}
+                      onChange={(e) => handleTotalChange(row.ano, row.tipo, e.target.value)}
+                      className="w-full h-full py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none px-2 font-semibold"
+                    />
+                  ) : (
+                    <div className="py-1 px-2 font-semibold">
+                      {total.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             );
