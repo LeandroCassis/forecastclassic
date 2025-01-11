@@ -16,7 +16,7 @@ export type Database = {
           id: string
           id_tipo: number
           mes: string
-          produto_codigo: string | null
+          produto_id: string | null
           tipo: string
           valor: number
         }
@@ -26,7 +26,7 @@ export type Database = {
           id?: string
           id_tipo: number
           mes: string
-          produto_codigo?: string | null
+          produto_id?: string | null
           tipo: string
           valor: number
         }
@@ -36,7 +36,7 @@ export type Database = {
           id?: string
           id_tipo?: number
           mes?: string
-          produto_codigo?: string | null
+          produto_id?: string | null
           tipo?: string
           valor?: number
         }
@@ -49,11 +49,11 @@ export type Database = {
             referencedColumns: ["ano", "id_tipo"]
           },
           {
-            foreignKeyName: "forecast_values_produto_codigo_fkey"
-            columns: ["produto_codigo"]
+            foreignKeyName: "forecast_values_produto_id_fkey"
+            columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
-            referencedColumns: ["codigo"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -127,6 +127,8 @@ export type Database = {
           familia1: string
           familia2: string
           fob: number | null
+          id: string
+          indice: number | null
           marca: string
           preco_venda: number | null
           produto: string
@@ -141,6 +143,8 @@ export type Database = {
           familia1: string
           familia2: string
           fob?: number | null
+          id?: string
+          indice?: number | null
           marca: string
           preco_venda?: number | null
           produto: string
@@ -155,6 +159,8 @@ export type Database = {
           familia1?: string
           familia2?: string
           fob?: number | null
+          id?: string
+          indice?: number | null
           marca?: string
           preco_venda?: number | null
           produto?: string
