@@ -115,16 +115,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
 
-      // First, check if the value exists
-      const { data: existingData } = await supabase
-        .from('forecast_values')
-        .select('valor')
-        .eq('produto_id', productData.id)
-        .eq('ano', ano)
-        .eq('id_tipo', id_tipo)
-        .eq('mes', mes)
-        .maybeSingle();
-
       // Record the edit
       await supabase
         .from('forecast_edits')
@@ -133,36 +123,23 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
           mes,
           ano,
           tipo,
-          valor_anterior: existingData?.valor,
+          valor_anterior: forecastValues?.[`${ano}-${id_tipo}`]?.[mes] || null,
           valor_novo: valor
         });
 
-      if (existingData) {
-        // Update existing value
-        const { error } = await supabase
-          .from('forecast_values')
-          .update({ valor })
-          .eq('produto_id', productData.id)
-          .eq('ano', ano)
-          .eq('id_tipo', id_tipo)
-          .eq('mes', mes);
+      // Upsert the value
+      const { error } = await supabase
+        .from('forecast_values')
+        .upsert({
+          produto_id: productData.id,
+          ano,
+          tipo,
+          id_tipo,
+          mes,
+          valor
+        });
 
-        if (error) throw error;
-      } else {
-        // Insert new value
-        const { error } = await supabase
-          .from('forecast_values')
-          .upsert({
-            produto_id: productData.id,
-            ano,
-            tipo,
-            id_tipo,
-            mes,
-            valor
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
