@@ -85,7 +85,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   const { data: forecastValues } = useQuery({
     queryKey: ['forecast_values', productData?.id],
     queryFn: async () => {
-      if (!productData?.id) return [];
+      if (!productData?.id) return {};
       
       const { data, error } = await supabase
         .from('forecast_values')
@@ -152,7 +152,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         // Insert new value
         const { error } = await supabase
           .from('forecast_values')
-          .insert({
+          .upsert({
             produto_id: productData.id,
             ano,
             tipo,
@@ -192,16 +192,16 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     months.forEach(month => {
       if (!yearClosedMonths[month]) {
         const adjustedPercentage = yearPercentages[month] / openMonthsPercentageSum;
-        const remainingTotal = numericTotal - Object.entries(yearClosedMonths)
+        const key = `${ano}-${id_tipo}`;
+        const closedMonthsTotal = Object.entries(yearClosedMonths)
           .reduce((sum, [m, isClosed]) => {
-            if (isClosed) {
-              const key = `${ano}-${id_tipo}`;
-              return forecastValues && forecastValues[key] && forecastValues[key][m]
-                ? sum + forecastValues[key][m]
-                : sum;
+            if (isClosed && forecastValues && forecastValues[key] && forecastValues[key][m]) {
+              return sum + (forecastValues[key][m] || 0);
             }
             return sum;
           }, 0);
+        
+        const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
         updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
@@ -240,7 +240,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             const isEditable = grupo.tipo === 'REVISÃO';
             const key = `${grupo.ano}-${grupo.id_tipo}`;
             const valores = forecastValues?.[key] || {};
-            const total = Math.round(Object.values(valores).reduce((sum, val) => sum + val, 0));
+            const total = Object.values(valores).reduce((sum: number, val: number) => sum + (val || 0), 0);
             const isEvenRow = index % 2 === 0;
             
             return (
