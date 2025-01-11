@@ -60,7 +60,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     console.log('Value updated:', { ano, tipo, month, value });
   };
 
-  // Filtra os dados com base nos filtros de ano e tipo
   const filteredData = data.filter(row => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(row.ano.toString())) {
       return false;
@@ -72,42 +71,53 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   });
 
   return (
-    <div className="rounded-md border border-slate-200 overflow-x-auto">
+    <div className="rounded-md border border-table-border overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Ano</TableHead>
-            <TableHead className="w-[100px]">Tipo</TableHead>
+          <TableRow className="bg-table-header hover:bg-table-header">
+            <TableHead className="text-white font-semibold w-[80px] text-left">ANO</TableHead>
+            <TableHead className="text-white font-semibold w-[100px] text-left">TIPO</TableHead>
             {months.map(month => (
-              <TableHead key={month}>{month}</TableHead>
+              <TableHead key={month} className="text-white font-semibold text-center">{month}</TableHead>
             ))}
-            <TableHead>Total</TableHead>
+            <TableHead className="text-white font-semibold text-center">TOTAL</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.map((row, index) => {
             const isEditable = row.tipo === 'REVISÃO';
             const total = Object.values(row.valores).reduce((sum, val) => sum + val, 0);
+            const isEvenRow = index % 2 === 0;
             
             return (
-              <TableRow key={`${row.ano}-${row.tipo}`}>
-                <TableCell>{row.ano}</TableCell>
-                <TableCell>{row.tipo}</TableCell>
+              <TableRow 
+                key={`${row.ano}-${row.tipo}`}
+                className={`
+                  ${isEvenRow ? 'bg-table-row' : 'bg-table-altRow'}
+                  hover:bg-slate-200 transition-colors
+                `}
+              >
+                <TableCell className="font-medium text-left">{row.ano}</TableCell>
+                <TableCell className="text-left">{row.tipo}</TableCell>
                 {months.map(month => (
-                  <TableCell key={month}>
+                  <TableCell key={month} className="text-center p-0">
                     {isEditable ? (
                       <input
                         type="number"
                         value={row.valores[month]}
                         onChange={(e) => handleValueChange(row.ano, row.tipo, month, e.target.value)}
-                        className="w-full p-1 border rounded"
+                        className="w-full h-full p-2 text-center bg-transparent border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />
                     ) : (
-                      row.valores[month]
+                      <div className="p-2">
+                        {row.valores[month].toLocaleString('pt-BR')}
+                      </div>
                     )}
                   </TableCell>
                 ))}
-                <TableCell>{total}</TableCell>
+                <TableCell className="text-center font-semibold">
+                  {total.toLocaleString('pt-BR')}
+                </TableCell>
               </TableRow>
             );
           })}
