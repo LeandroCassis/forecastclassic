@@ -115,7 +115,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
 
-      // Record the edit
+      // Record the edit first
       await supabase
         .from('forecast_edits')
         .insert({
@@ -127,19 +127,28 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
           valor_novo: valor
         });
 
-      // Upsert the value
+      // Then update the forecast value using upsert with onConflict
       const { error } = await supabase
         .from('forecast_values')
-        .upsert({
-          produto_id: productData.id,
-          ano,
-          tipo,
-          id_tipo,
-          mes,
-          valor
-        });
+        .upsert(
+          {
+            produto_id: productData.id,
+            ano,
+            tipo,
+            id_tipo,
+            mes,
+            valor
+          },
+          {
+            onConflict: 'produto_id,ano,id_tipo,mes',
+            ignoreDuplicates: false
+          }
+        );
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating forecast value:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
