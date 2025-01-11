@@ -97,7 +97,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   };
 
   const handleTotalChange = (ano: number, tipo: string, totalValue: string) => {
-    const numericTotal = Number(parseFloat(totalValue).toFixed(1)) || 0;
+    const numericTotal = parseInt(totalValue) || 0;
     const yearPercentages = distributionPercentages[ano.toString()];
     
     if (!yearPercentages) {
@@ -147,7 +147,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         <TableBody>
           {filteredData.map((row, index) => {
             const isEditable = row.tipo === 'REVISÃO';
-            const total = Number(Object.values(row.valores).reduce((sum, val) => sum + val, 0).toFixed(1));
+            const total = Math.round(Object.values(row.valores).reduce((sum, val) => sum + val, 0));
             const isEvenRow = index % 2 === 0;
             
             return (
@@ -186,7 +186,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
                     />
                   ) : (
                     <div className="py-1 px-2 font-semibold">
-                      {total.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      {total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                   )}
                 </TableCell>
