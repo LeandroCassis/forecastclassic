@@ -385,3 +385,5 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     </div>
   );
 };
+
+export default ForecastTable;
