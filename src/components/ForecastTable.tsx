@@ -34,47 +34,62 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   const queryClient = useQueryClient();
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
 
-  const { data: productData } = useQuery({
+  // Fetch product ID
+  const { data: productData, error: productError } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
+      console.log('Fetching product data for:', produto);
       const { data, error } = await supabase
         .from('produtos')
         .select('id')
         .eq('produto', produto)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching product:', error);
+        throw error;
+      }
+      console.log('Product data:', data);
       return data;
     }
   });
 
   // Fetch all grupos
-  const { data: grupos } = useQuery({
+  const { data: grupos, error: gruposError } = useQuery({
     queryKey: ['grupos'],
     queryFn: async () => {
+      console.log('Fetching grupos');
       const { data, error } = await supabase
         .from('grupos')
         .select('*')
         .order('ano')
         .order('id_tipo');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching grupos:', error);
+        throw error;
+      }
+      console.log('Grupos data:', data);
       return data as Grupo[];
     }
   });
 
   // Fetch month configurations
-  const { data: monthConfigurations } = useQuery({
+  const { data: monthConfigurations, error: monthConfigError } = useQuery({
     queryKey: ['month_configurations'],
     queryFn: async () => {
+      console.log('Fetching month configurations');
       const { data, error } = await supabase
         .from('month_configurations')
         .select('*')
         .order('ano')
         .order('mes');
       
-      if (error) throw error;
-
+      if (error) {
+        console.error('Error fetching month configurations:', error);
+        throw error;
+      }
+      
       const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
       data.forEach(config => {
         if (!configByYear[config.ano]) {
@@ -87,22 +102,30 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         };
       });
       
+      console.log('Month configurations:', configByYear);
       return configByYear;
     }
   });
 
   // Fetch forecast values
-  const { data: forecastValues } = useQuery({
+  const { data: forecastValues, error: forecastError } = useQuery({
     queryKey: ['forecast_values', productData?.id],
     queryFn: async () => {
-      if (!productData?.id) return {};
+      if (!productData?.id) {
+        console.log('No product ID available yet');
+        return {};
+      }
       
+      console.log('Fetching forecast values for product ID:', productData.id);
       const { data, error } = await supabase
         .from('forecast_values')
         .select('*')
         .eq('produto_id', productData.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching forecast values:', error);
+        throw error;
+      }
       
       const transformedData: { [key: string]: { [key: string]: number } } = {};
       
@@ -114,12 +137,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         transformedData[key][row.mes] = row.valor;
       });
       
+      console.log('Transformed forecast values:', transformedData);
       return transformedData;
     },
     enabled: !!productData?.id
   });
 
-  // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
@@ -232,11 +255,23 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }, 0));
   };
 
-  if (!grupos || !monthConfigurations) return (
-    <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
-      <div className="text-slate-500">Carregando dados...</div>
-    </div>
-  );
+  // Show error states if any query fails
+  if (productError || gruposError || monthConfigError || forecastError) {
+    return (
+      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
+        <div className="text-red-500">Error loading data. Please try again later.</div>
+      </div>
+    );
+  }
+
+  // Show loading state if any query is still loading
+  if (!grupos || !monthConfigurations) {
+    return (
+      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
+        <div className="text-slate-500">Carregando dados...</div>
+      </div>
+    );
+  }
 
   const filteredGrupos = grupos.filter(grupo => {
     if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
