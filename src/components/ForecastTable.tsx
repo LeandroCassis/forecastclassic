@@ -80,41 +80,59 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     }
   });
 
-  // Fetch forecast values
-  const { data: forecastValues } = useQuery({
-    queryKey: ['forecast_values', productData?.id],
+  // Fetch forecast values and revisions
+  const { data: forecastData } = useQuery({
+    queryKey: ['forecast_data', productData?.id],
     queryFn: async () => {
-      if (!productData?.id) return {};
+      if (!productData?.id) return { values: {}, revisions: {} };
       
-      const { data, error } = await supabase
+      // Fetch original values
+      const { data: valuesData, error: valuesError } = await supabase
         .from('forecast_values')
         .select('*')
         .eq('produto_id', productData.id);
       
-      if (error) throw error;
+      if (valuesError) throw valuesError;
+
+      // Fetch revisions
+      const { data: revisionsData, error: revisionsError } = await supabase
+        .from('forecast_revisions')
+        .select('*')
+        .eq('produto_id', productData.id);
       
-      const transformedData: { [key: string]: { [key: string]: number } } = {};
+      if (revisionsError) throw revisionsError;
       
-      data.forEach(row => {
+      const transformedValues: { [key: string]: { [key: string]: number } } = {};
+      const transformedRevisions: { [key: string]: { [key: string]: number } } = {};
+      
+      valuesData.forEach(row => {
         const key = `${row.ano}-${row.id_tipo}`;
-        if (!transformedData[key]) {
-          transformedData[key] = {};
+        if (!transformedValues[key]) {
+          transformedValues[key] = {};
         }
-        transformedData[key][row.mes] = row.valor;
+        transformedValues[key][row.mes] = row.valor;
+      });
+
+      revisionsData.forEach(row => {
+        const key = `${row.ano}-${row.id_tipo}`;
+        if (!transformedRevisions[key]) {
+          transformedRevisions[key] = {};
+        }
+        transformedRevisions[key][row.mes] = row.valor;
       });
       
-      return transformedData;
+      return { values: transformedValues, revisions: transformedRevisions };
     },
     enabled: !!productData?.id
   });
 
-  // Update mutation
+  // Update mutation for revisions
   const updateMutation = useMutation({
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
       if (!productData?.id) throw new Error('Product ID not found');
 
       const { error } = await supabase
-        .from('forecast_values')
+        .from('forecast_revisions')
         .upsert(
           {
             produto_id: productData.id,
@@ -131,12 +149,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         );
 
       if (error) {
-        console.error('Error updating forecast value:', error);
+        console.error('Error updating revision value:', error);
         throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
+      queryClient.invalidateQueries({ queryKey: ['forecast_data'] });
     }
   });
 
@@ -159,7 +177,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     
     if (value !== undefined) {
       updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: value });
-      console.log('Value saved to database:', { ano, tipo, id_tipo, month, value });
+      console.log('Revision value saved to database:', { ano, tipo, id_tipo, month, value });
     }
   };
 
@@ -182,22 +200,16 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         const key = `${ano}-${id_tipo}`;
         const closedMonthsTotal = Object.entries(yearClosedMonths)
           .reduce((sum, [m, isClosed]) => {
-            if (isClosed && forecastValues && forecastValues[key] && forecastValues[key][m]) {
-              return sum + (forecastValues[key][m] || 0);
+            if (isClosed) {
+              const baseValue = forecastData?.values[key]?.[m] || 0;
+              const revisionValue = forecastData?.revisions[key]?.[m] || baseValue;
+              return sum + revisionValue;
             }
             return sum;
           }, 0);
         
         const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
-        
-        setLocalValues(prev => ({
-          ...prev,
-          [key]: {
-            ...(prev[key] || {}),
-            [month]: newValue
-          }
-        }));
         
         updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
@@ -220,7 +232,8 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
 
   const getValue = (ano: number, id_tipo: number, month: string) => {
     const key = `${ano}-${id_tipo}`;
-    return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
+    const baseValue = forecastData?.values[key]?.[month] || 0;
+    return localValues[key]?.[month] ?? forecastData?.revisions[key]?.[month] ?? baseValue;
   };
 
   const calculateTotal = (ano: number, id_tipo: number) => {
