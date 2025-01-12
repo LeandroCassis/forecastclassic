@@ -54,25 +54,25 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
-            className="w-full justify-between border-slate-200 bg-white hover:bg-slate-100"
+            className="w-full justify-between border-blue-200 bg-white hover:bg-blue-50/50 hover:border-blue-300 transition-all duration-300"
           >
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm text-slate-900">{label}</span>
+              <span className="font-medium text-sm text-blue-900">{label}</span>
               {selectedCount > 0 && (
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                   {selectedCount}
                 </span>
               )}
             </div>
             {openStates[filterType] ? (
-              <ChevronUp className="h-4 w-4 opacity-50" />
+              <ChevronUp className="h-4 w-4 text-blue-500" />
             ) : (
-              <ChevronDown className="h-4 w-4 opacity-50" />
+              <ChevronDown className="h-4 w-4 text-blue-500" />
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-0" align="start">
-          <div className="p-2 border-b">
+        <PopoverContent className="w-56 p-0 border-blue-200 shadow-lg" align="start">
+          <div className="p-2 border-b border-blue-100">
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id={`${filterType}-all`}
@@ -88,7 +88,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               />
               <label 
                 htmlFor={`${filterType}-all`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-sm font-medium leading-none text-blue-900 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Selecionar Todos
               </label>
@@ -107,7 +107,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   />
                   <label 
                     htmlFor={`${filterType}-${option.value}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-sm font-medium leading-none text-slate-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {option.label}
                   </label>
@@ -121,7 +121,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 p-4 bg-white/70 backdrop-blur-sm rounded-lg shadow-sm border border-slate-100">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 p-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300">
       {renderFilterGroup('Empresa', 'empresa', [
         { value: 'empresa1', label: 'Empresa 1' },
         { value: 'empresa2', label: 'Empresa 2' },

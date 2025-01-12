@@ -34,7 +34,6 @@ const IndexContent = () => {
 
   const [showFilters, setShowFilters] = useState(true);
 
-  // Fetch products from Supabase
   const { data: produtos, isLoading } = useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
@@ -75,10 +74,10 @@ const IndexContent = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-6">
-        <div className="max-w-[95%] mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-[95%] mx-auto py-8">
           <div className="flex items-center justify-center h-40">
-            <div className="text-slate-500">Carregando produtos...</div>
+            <div className="text-blue-600 animate-pulse">Carregando produtos...</div>
           </div>
         </div>
       </div>
@@ -86,28 +85,32 @@ const IndexContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-6">
-      <div className="max-w-[95%] mx-auto space-y-6">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-slate-100">
-          <div className="flex justify-between items-center mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-[95%] mx-auto py-8 space-y-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-8 transition-all duration-300">
+          <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">Forecast e Vendas</h1>
-              <p className="text-sm text-slate-500 mt-1">Visualização e edição de previsões de vendas</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Forecast e Vendas
+              </h1>
+              <p className="text-slate-500 mt-2">
+                Visualização e edição de previsões de vendas
+              </p>
             </div>
             <Button
               variant="outline"
               onClick={toggleFilters}
-              className="flex items-center gap-2 rounded-xl hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-2 rounded-xl border-blue-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-300"
             >
               {showFilters ? (
                 <>
                   Ocultar Filtros
-                  <ChevronUp className="h-4 w-4" />
+                  <ChevronUp className="h-4 w-4 text-blue-500" />
                 </>
               ) : (
                 <>
                   Exibir Filtros
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4 text-blue-500" />
                 </>
               )}
             </Button>
@@ -116,12 +119,15 @@ const IndexContent = () => {
         
         {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
         
-        <div className="space-y-6">
+        <div className="space-y-8">
           {filters.produto.length > 0 ? (
             <>
               {filters.produto.map(produto => (
-                <div key={produto} className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-100">
-                  <h2 className="text-xl font-medium text-slate-800 mb-4">{produto}</h2>
+                <div 
+                  key={produto} 
+                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
+                >
+                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
                   <ForecastTable 
                     produto={produto} 
                     anoFiltro={filters.ano}
@@ -133,8 +139,11 @@ const IndexContent = () => {
           ) : (
             <>
               {produtos?.map(produto => shouldShowProduct(produto) && (
-                <div key={produto} className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-100">
-                  <h2 className="text-xl font-medium text-slate-800 mb-4">{produto}</h2>
+                <div 
+                  key={produto} 
+                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
+                >
+                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
                   <ForecastTable 
                     produto={produto} 
                     anoFiltro={filters.ano}
