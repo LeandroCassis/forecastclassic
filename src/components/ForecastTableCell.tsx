@@ -20,7 +20,7 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
 }) => {
   return (
     <TableCell 
-      className={`text-right p-0 border-r border-slate-200 
+      className={`text-right p-0 border-r border-slate-200 w-[100px] min-w-[100px]
         ${shouldBeYellow ? 'bg-yellow-50' : 'bg-white'}
         ${isEditable && !isRealized ? 'bg-blue-50' : ''}
       `}

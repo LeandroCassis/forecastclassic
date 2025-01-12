@@ -141,12 +141,17 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
         <Table>
           <TableHeader>
             <TableRow className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-700">
-              <TableHead className="text-white font-medium w-[80px] text-left py-3 border-r border-blue-500/30">ANO</TableHead>
-              <TableHead className="text-white font-medium w-[100px] text-left py-3 border-r border-blue-500/30">TIPO</TableHead>
+              <TableHead className="text-white font-medium w-[100px] min-w-[100px] text-left py-3 border-r border-blue-500/30">ANO</TableHead>
+              <TableHead className="text-white font-medium w-[120px] min-w-[120px] text-left py-3 border-r border-blue-500/30">TIPO</TableHead>
               {months.map(month => (
-                <TableHead key={month} className="text-white font-medium text-right py-3 border-r border-blue-500/30">{month}</TableHead>
+                <TableHead 
+                  key={month} 
+                  className="text-white font-medium w-[100px] min-w-[100px] text-right py-3 border-r border-blue-500/30"
+                >
+                  {month}
+                </TableHead>
               ))}
-              <TableHead className="text-white font-medium text-right py-3">TOTAL</TableHead>
+              <TableHead className="text-white font-medium w-[120px] min-w-[120px] text-right py-3">TOTAL</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
