@@ -18,6 +18,8 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
   onChange,
   onBlur
 }) => {
+  const displayValue = value === 0 ? "-" : value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
   return (
     <TableCell 
       className={`text-right p-0 border-r border-slate-200 w-[100px] min-w-[100px]
@@ -35,7 +37,7 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
         />
       ) : (
         <div className="py-2 px-3">
-          {value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+          {displayValue}
         </div>
       )}
     </TableCell>

@@ -30,6 +30,7 @@ export const ForecastTableRow: React.FC<ForecastTableRowProps> = ({
 }) => {
   const isEditable = tipo === 'REVISÃO';
   const total = calculateTotal(ano, id_tipo);
+  const displayTotal = total === 0 ? "-" : total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
     <TableRow className="hover:bg-slate-50 transition-colors">
@@ -60,7 +61,7 @@ export const ForecastTableRow: React.FC<ForecastTableRowProps> = ({
           />
         ) : (
           <div className="py-2 px-3 font-medium">
-            {total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {displayTotal}
           </div>
         )}
       </TableCell>
