@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-interface ForecastData {
-  ano: number;
-  tipo: string;
-  id_tipo: number;
-  valores: { [key: string]: number };
-}
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ForecastTableRow } from './ForecastTableRow';
+import { useForecastData } from '@/hooks/useForecastData';
+import { useForecastMutations } from '@/hooks/useForecastMutations';
 
 interface ForecastTableProps {
   produto: string;
@@ -16,137 +10,12 @@ interface ForecastTableProps {
   tipoFiltro?: string[];
 }
 
-interface Grupo {
-  ano: number;
-  id_tipo: number;
-  tipo: string;
-}
-
-interface MonthConfiguration {
-  mes: string;
-  pct_atual: number;
-  realizado: boolean;
-}
-
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
-  const queryClient = useQueryClient();
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
-
-  const { data: productData } = useQuery({
-    queryKey: ['product', produto],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('id')
-        .eq('produto', produto)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch all grupos
-  const { data: grupos } = useQuery({
-    queryKey: ['grupos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('grupos')
-        .select('*')
-        .order('ano')
-        .order('id_tipo');
-      
-      if (error) throw error;
-      return data as Grupo[];
-    }
-  });
-
-  // Fetch month configurations
-  const { data: monthConfigurations } = useQuery({
-    queryKey: ['month_configurations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('month_configurations')
-        .select('*')
-        .order('ano')
-        .order('mes');
-      
-      if (error) throw error;
-
-      const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
-      data.forEach(config => {
-        if (!configByYear[config.ano]) {
-          configByYear[config.ano] = {};
-        }
-        configByYear[config.ano][config.mes] = {
-          mes: config.mes,
-          pct_atual: config.pct_atual,
-          realizado: config.realizado
-        };
-      });
-      
-      return configByYear;
-    }
-  });
-
-  // Fetch forecast values
-  const { data: forecastValues } = useQuery({
-    queryKey: ['forecast_values', productData?.id],
-    queryFn: async () => {
-      if (!productData?.id) return {};
-      
-      const { data, error } = await supabase
-        .from('forecast_values')
-        .select('*')
-        .eq('produto_id', productData.id);
-      
-      if (error) throw error;
-      
-      const transformedData: { [key: string]: { [key: string]: number } } = {};
-      
-      data.forEach(row => {
-        const key = `${row.ano}-${row.id_tipo}`;
-        if (!transformedData[key]) {
-          transformedData[key] = {};
-        }
-        transformedData[key][row.mes] = row.valor;
-      });
-      
-      return transformedData;
-    },
-    enabled: !!productData?.id
-  });
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { ano: number, tipo: string, id_tipo: number, mes: string, valor: number }) => {
-      if (!productData?.id) throw new Error('Product ID not found');
-
-      const { error } = await supabase
-        .from('forecast_values')
-        .upsert(
-          {
-            produto_id: productData.id,
-            ano,
-            tipo,
-            id_tipo,
-            mes,
-            valor
-          },
-          {
-            onConflict: 'produto_id,ano,id_tipo,mes',
-            ignoreDuplicates: false
-          }
-        );
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
-    }
-  });
+  const { productData, grupos, monthConfigurations, forecastValues } = useForecastData(produto);
+  const { updateMutation } = useForecastMutations(productData?.id);
 
   const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
@@ -266,62 +135,20 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGrupos.map((grupo, index) => {
-              const isEditable = grupo.tipo === 'REVISÃO';
-              const total = calculateTotal(grupo.ano, grupo.id_tipo);
-              const yearConfig = monthConfigurations[grupo.ano] || {};
-              
-              return (
-                <TableRow 
-                  key={`${grupo.ano}-${grupo.id_tipo}`}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <TableCell className="font-medium text-left py-2 border-r border-slate-200 bg-white">{grupo.ano}</TableCell>
-                  <TableCell className="text-left py-2 border-r border-slate-200 bg-white">{grupo.tipo}</TableCell>
-                  {months.map(month => {
-                    const isRealized = yearConfig[month]?.realizado;
-                    const shouldBeYellow = isRealized && grupo.tipo === 'REVISÃO';
-                    return (
-                      <TableCell 
-                        key={month} 
-                        className={`text-right p-0 border-r border-slate-200 
-                          ${shouldBeYellow ? 'bg-yellow-50' : 'bg-white'}
-                          ${isEditable && !isRealized ? 'bg-blue-50' : ''}
-                        `}
-                      >
-                        {isEditable && !isRealized ? (
-                          <input
-                            type="number"
-                            value={getValue(grupo.ano, grupo.id_tipo, month)}
-                            onChange={(e) => handleValueChange(grupo.ano, grupo.tipo, grupo.id_tipo, month, e.target.value)}
-                            onBlur={() => handleBlur(grupo.ano, grupo.tipo, grupo.id_tipo, month)}
-                            className="w-full h-full py-2 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 transition-all"
-                          />
-                        ) : (
-                          <div className="py-2 px-3">
-                            {getValue(grupo.ano, grupo.id_tipo, month).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                          </div>
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className="text-right p-0 bg-white">
-                    {isEditable ? (
-                      <input
-                        type="number"
-                        value={total}
-                        onChange={(e) => handleTotalChange(grupo.ano, grupo.tipo, grupo.id_tipo, e.target.value)}
-                        className="w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium transition-all"
-                      />
-                    ) : (
-                      <div className="py-2 px-3 font-medium">
-                        {total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filteredGrupos.map((grupo) => (
+              <ForecastTableRow
+                key={`${grupo.ano}-${grupo.id_tipo}`}
+                ano={grupo.ano}
+                tipo={grupo.tipo}
+                id_tipo={grupo.id_tipo}
+                yearConfig={monthConfigurations[grupo.ano] || {}}
+                getValue={getValue}
+                handleValueChange={handleValueChange}
+                handleBlur={handleBlur}
+                handleTotalChange={handleTotalChange}
+                calculateTotal={calculateTotal}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>
