@@ -171,6 +171,8 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
   };
 
   const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
+    console.log('handleTotalChange called with:', { ano, tipo, id_tipo, totalValue });
+    
     const numericTotal = parseInt(totalValue) || 0;
     const yearConfig = monthConfigurations?.[ano] || {};
     
@@ -179,24 +181,35 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return;
     }
 
+    // Calculate sum of realized months
+    const key = `${ano}-${id_tipo}`;
+    const realizedMonthsTotal = months.reduce((sum, month) => {
+      if (yearConfig[month]?.realizado && forecastValues?.[key]?.[month]) {
+        return sum + (forecastValues[key][month] || 0);
+      }
+      return sum;
+    }, 0);
+
+    console.log('Realized months total:', realizedMonthsTotal);
+
+    // Calculate remaining amount to distribute
+    const remainingTotal = numericTotal - realizedMonthsTotal;
+    console.log('Remaining total to distribute:', remainingTotal);
+
+    // Calculate sum of percentages for unrealized months
     const openMonthsPercentageSum = Object.values(yearConfig)
       .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
+    console.log('Open months percentage sum:', openMonthsPercentageSum);
+
+    // Distribute remaining total across unrealized months
     months.forEach(month => {
       const monthConfig = yearConfig[month];
       if (monthConfig && !monthConfig.realizado) {
         const adjustedPercentage = monthConfig.pct_atual / openMonthsPercentageSum;
-        const key = `${ano}-${id_tipo}`;
-        const closedMonthsTotal = Object.entries(yearConfig)
-          .reduce((sum, [m, config]) => {
-            if (config.realizado && forecastValues && forecastValues[key] && forecastValues[key][m]) {
-              return sum + (forecastValues[key][m] || 0);
-            }
-            return sum;
-          }, 0);
-        
-        const remainingTotal = numericTotal - closedMonthsTotal;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
+        
+        console.log(`Setting value for ${month}:`, { adjustedPercentage, newValue });
         
         setLocalValues(prev => ({
           ...prev,
