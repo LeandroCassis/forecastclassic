@@ -3,46 +3,60 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useForecastData = (produto: string) => {
   // Product data query
-  const { data: productData } = useQuery({
+  const { data: productData, isError: productError } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
+      console.log('Fetching product data for:', produto);
       const { data, error } = await supabase
         .from('produtos')
         .select('id')
         .eq('produto', produto)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching product:', error);
+        throw error;
+      }
+      console.log('Product data fetched:', data);
       return data;
     }
   });
 
   // Grupos query
-  const { data: grupos } = useQuery({
+  const { data: grupos, isError: gruposError } = useQuery({
     queryKey: ['grupos'],
     queryFn: async () => {
+      console.log('Fetching grupos');
       const { data, error } = await supabase
         .from('grupos')
         .select('*')
         .order('ano')
         .order('id_tipo');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching grupos:', error);
+        throw error;
+      }
+      console.log('Grupos fetched:', data);
       return data;
     }
   });
 
   // Month configurations query
-  const { data: monthConfigurations } = useQuery({
+  const { data: monthConfigurations, isError: configError } = useQuery({
     queryKey: ['month_configurations'],
     queryFn: async () => {
+      console.log('Fetching month configurations');
       const { data, error } = await supabase
         .from('month_configurations')
         .select('*')
         .order('ano')
         .order('mes');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching month configurations:', error);
+        throw error;
+      }
 
       const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
       data.forEach(config => {
@@ -56,22 +70,30 @@ export const useForecastData = (produto: string) => {
         };
       });
       
+      console.log('Month configurations processed:', configByYear);
       return configByYear;
     }
   });
 
   // Forecast values query
-  const { data: forecastValues } = useQuery({
+  const { data: forecastValues, isError: forecastError } = useQuery({
     queryKey: ['forecast_values', productData?.id],
     queryFn: async () => {
-      if (!productData?.id) return {};
+      if (!productData?.id) {
+        console.log('No product ID available yet, skipping forecast values fetch');
+        return {};
+      }
       
+      console.log('Fetching forecast values for product ID:', productData.id);
       const { data, error } = await supabase
         .from('forecast_values')
         .select('*')
         .eq('produto_id', productData.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching forecast values:', error);
+        throw error;
+      }
       
       const transformedData: { [key: string]: { [key: string]: number } } = {};
       
@@ -83,16 +105,20 @@ export const useForecastData = (produto: string) => {
         transformedData[key][row.mes] = row.valor;
       });
       
+      console.log('Forecast values processed:', transformedData);
       return transformedData;
     },
     enabled: !!productData?.id
   });
 
+  const hasErrors = productError || gruposError || configError || forecastError;
+
   return {
     productData,
     grupos,
     monthConfigurations,
-    forecastValues
+    forecastValues,
+    hasErrors
   };
 };
 

@@ -3,6 +3,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { ForecastTableRow } from './ForecastTableRow';
 import { useForecastData } from '@/hooks/useForecastData';
 import { useForecastMutations } from '@/hooks/useForecastMutations';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ForecastTableProps {
   produto: string;
@@ -14,8 +15,9 @@ const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', '
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
-  const { productData, grupos, monthConfigurations, forecastValues } = useForecastData(produto);
+  const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto);
   const { updateMutation } = useForecastMutations(productData?.id);
+  const { toast } = useToast();
 
   const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
@@ -103,6 +105,19 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
       return sum + (getValue(ano, id_tipo, month) || 0);
     }, 0));
   };
+
+  if (hasErrors) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to load forecast data. Please try again later.",
+    });
+    return (
+      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
+        <div className="text-red-500">Error loading data. Please try again later.</div>
+      </div>
+    );
+  }
 
   if (!grupos || !monthConfigurations) return (
     <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
