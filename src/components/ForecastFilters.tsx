@@ -8,20 +8,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
-  // State for each filter
-  const [selectedCodigo, setSelectedCodigo] = useState<string>('all');
-  const [selectedEmpresa, setSelectedEmpresa] = useState<string>('all');
-  const [selectedProduto, setSelectedProduto] = useState<string>('all');
-  const [selectedMarca, setSelectedMarca] = useState<string>('all');
-  const [selectedFabrica, setSelectedFabrica] = useState<string>('all');
-  const [selectedFamilia1, setSelectedFamilia1] = useState<string>('all');
-  const [selectedFamilia2, setSelectedFamilia2] = useState<string>('all');
+  // State for each filter (now arrays for multi-select)
+  const [selectedCodigos, setSelectedCodigos] = useState<string[]>([]);
+  const [selectedEmpresas, setSelectedEmpresas] = useState<string[]>([]);
+  const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
+  const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
+  const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
+  const [selectedFamilias1, setSelectedFamilias1] = useState<string[]>([]);
+  const [selectedFamilias2, setSelectedFamilias2] = useState<string[]>([]);
+
+  // Open state for each popover
+  const [openStates, setOpenStates] = useState({
+    codigo: false,
+    empresa: false,
+    produto: false,
+    marca: false,
+    fabrica: false,
+    familia1: false,
+    familia2: false,
+  });
 
   // Fetch all products once with caching
   const { data: allProducts, isLoading } = useQuery({
@@ -37,7 +53,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       console.log('All products fetched:', data);
       return data || [];
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
   });
 
   // Memoized filter options based on current selections
@@ -55,26 +71,26 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     let filteredProducts = allProducts;
 
     // Apply cascading filters
-    if (selectedCodigo !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.codigo === selectedCodigo);
+    if (selectedCodigos.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedCodigos.includes(p.codigo));
     }
-    if (selectedEmpresa !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.empresa === selectedEmpresa);
+    if (selectedEmpresas.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedEmpresas.includes(p.empresa));
     }
-    if (selectedProduto !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.produto === selectedProduto);
+    if (selectedProdutos.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedProdutos.includes(p.produto));
     }
-    if (selectedMarca !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.marca === selectedMarca);
+    if (selectedMarcas.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedMarcas.includes(p.marca));
     }
-    if (selectedFabrica !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.fabrica === selectedFabrica);
+    if (selectedFabricas.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedFabricas.includes(p.fabrica));
     }
-    if (selectedFamilia1 !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.familia1 === selectedFamilia1);
+    if (selectedFamilias1.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedFamilias1.includes(p.familia1));
     }
-    if (selectedFamilia2 !== 'all') {
-      filteredProducts = filteredProducts.filter(p => p.familia2 === selectedFamilia2);
+    if (selectedFamilias2.length > 0) {
+      filteredProducts = filteredProducts.filter(p => selectedFamilias2.includes(p.familia2));
     }
 
     // Get unique values for each filter
@@ -87,58 +103,117 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       familias1: [...new Set(filteredProducts.map(p => p.familia1))].sort(),
       familias2: [...new Set(filteredProducts.map(p => p.familia2))].sort(),
     };
-  }, [allProducts, selectedCodigo, selectedEmpresa, selectedProduto, selectedMarca, selectedFabrica, selectedFamilia1, selectedFamilia2]);
+  }, [allProducts, selectedCodigos, selectedEmpresas, selectedProdutos, selectedMarcas, selectedFabricas, selectedFamilias1, selectedFamilias2]);
 
   const handleFilterChange = (filterType: string, value: string) => {
-    // Reset dependent filters when a parent filter changes
+    let newValues: string[] = [];
     switch (filterType) {
       case 'codigo':
-        setSelectedCodigo(value);
-        setSelectedEmpresa('all');
-        setSelectedProduto('all');
-        setSelectedMarca('all');
-        setSelectedFabrica('all');
-        setSelectedFamilia1('all');
-        setSelectedFamilia2('all');
+        newValues = selectedCodigos.includes(value)
+          ? selectedCodigos.filter(item => item !== value)
+          : [...selectedCodigos, value];
+        setSelectedCodigos(newValues);
         break;
       case 'empresa':
-        setSelectedEmpresa(value);
-        setSelectedProduto('all');
-        setSelectedMarca('all');
-        setSelectedFabrica('all');
-        setSelectedFamilia1('all');
-        setSelectedFamilia2('all');
+        newValues = selectedEmpresas.includes(value)
+          ? selectedEmpresas.filter(item => item !== value)
+          : [...selectedEmpresas, value];
+        setSelectedEmpresas(newValues);
         break;
       case 'produto':
-        setSelectedProduto(value);
-        setSelectedMarca('all');
-        setSelectedFabrica('all');
-        setSelectedFamilia1('all');
-        setSelectedFamilia2('all');
+        newValues = selectedProdutos.includes(value)
+          ? selectedProdutos.filter(item => item !== value)
+          : [...selectedProdutos, value];
+        setSelectedProdutos(newValues);
         break;
       case 'marca':
-        setSelectedMarca(value);
-        setSelectedFabrica('all');
-        setSelectedFamilia1('all');
-        setSelectedFamilia2('all');
+        newValues = selectedMarcas.includes(value)
+          ? selectedMarcas.filter(item => item !== value)
+          : [...selectedMarcas, value];
+        setSelectedMarcas(newValues);
         break;
       case 'fabrica':
-        setSelectedFabrica(value);
-        setSelectedFamilia1('all');
-        setSelectedFamilia2('all');
+        newValues = selectedFabricas.includes(value)
+          ? selectedFabricas.filter(item => item !== value)
+          : [...selectedFabricas, value];
+        setSelectedFabricas(newValues);
         break;
       case 'familia1':
-        setSelectedFamilia1(value);
-        setSelectedFamilia2('all');
+        newValues = selectedFamilias1.includes(value)
+          ? selectedFamilias1.filter(item => item !== value)
+          : [...selectedFamilias1, value];
+        setSelectedFamilias1(newValues);
         break;
       case 'familia2':
-        setSelectedFamilia2(value);
+        newValues = selectedFamilias2.includes(value)
+          ? selectedFamilias2.filter(item => item !== value)
+          : [...selectedFamilias2, value];
+        setSelectedFamilias2(newValues);
         break;
     }
-
-    // Notify parent component of filter changes
-    onFilterChange(filterType, value === 'all' ? [] : [value]);
+    onFilterChange(filterType, newValues);
   };
+
+  const renderMultiSelect = (
+    type: string,
+    label: string,
+    options: string[],
+    selectedValues: string[],
+  ) => (
+    <Popover 
+      open={openStates[type as keyof typeof openStates]}
+      onOpenChange={(open) => setOpenStates(prev => ({ ...prev, [type]: open }))}
+    >
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+            openStates[type as keyof typeof openStates] && "ring-2 ring-ring ring-offset-2"
+          )}
+        >
+          <span className="flex gap-1 flex-wrap">
+            {selectedValues.length === 0 ? (
+              label
+            ) : (
+              selectedValues.map(value => (
+                <Badge 
+                  key={value}
+                  variant="secondary" 
+                  className="mr-1 mb-1"
+                >
+                  {value}
+                </Badge>
+              ))
+            )}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0">
+        <Command>
+          <CommandInput placeholder={`Buscar ${label.toLowerCase()}...`} />
+          <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+          <CommandGroup className="max-h-64 overflow-auto">
+            {options.map((option) => (
+              <CommandItem
+                key={option}
+                value={option}
+                onSelect={() => handleFilterChange(type, option)}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    selectedValues.includes(option) ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {option}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 
   if (isLoading) {
     return (
@@ -156,124 +231,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-7 gap-3 p-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300">
-      <Select
-        value={selectedCodigo}
-        onValueChange={(value) => handleFilterChange('codigo', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Código" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {filterOptions.codigos.map((codigo) => (
-            <SelectItem key={codigo} value={codigo}>
-              {codigo}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedEmpresa}
-        onValueChange={(value) => handleFilterChange('empresa', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Empresa" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {filterOptions.empresas.map((empresa) => (
-            <SelectItem key={empresa} value={empresa}>
-              {empresa}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedProduto}
-        onValueChange={(value) => handleFilterChange('produto', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Produto" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {filterOptions.produtos.map((produto) => (
-            <SelectItem key={produto} value={produto}>
-              {produto}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedMarca}
-        onValueChange={(value) => handleFilterChange('marca', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Marca" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {filterOptions.marcas.map((marca) => (
-            <SelectItem key={marca} value={marca}>
-              {marca}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedFabrica}
-        onValueChange={(value) => handleFilterChange('fabrica', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Fábrica" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {filterOptions.fabricas.map((fabrica) => (
-            <SelectItem key={fabrica} value={fabrica}>
-              {fabrica}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedFamilia1}
-        onValueChange={(value) => handleFilterChange('familia1', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Família 1" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {filterOptions.familias1.map((familia1) => (
-            <SelectItem key={familia1} value={familia1}>
-              {familia1}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={selectedFamilia2}
-        onValueChange={(value) => handleFilterChange('familia2', value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Família 2" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
-          {filterOptions.familias2.map((familia2) => (
-            <SelectItem key={familia2} value={familia2}>
-              {familia2}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {renderMultiSelect('codigo', 'Código', filterOptions.codigos, selectedCodigos)}
+      {renderMultiSelect('empresa', 'Empresa', filterOptions.empresas, selectedEmpresas)}
+      {renderMultiSelect('produto', 'Produto', filterOptions.produtos, selectedProdutos)}
+      {renderMultiSelect('marca', 'Marca', filterOptions.marcas, selectedMarcas)}
+      {renderMultiSelect('fabrica', 'Fábrica', filterOptions.fabricas, selectedFabricas)}
+      {renderMultiSelect('familia1', 'Família 1', filterOptions.familias1, selectedFamilias1)}
+      {renderMultiSelect('familia2', 'Família 2', filterOptions.familias2, selectedFamilias2)}
     </div>
   );
 };
