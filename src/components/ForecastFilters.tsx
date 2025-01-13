@@ -107,23 +107,29 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     refetchFilteredOptions();
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
-  const handleMultiSelect = (value: string, currentSelected: string[], setter: (values: string[]) => void, type: string, options: string[]) => {
+  const handleMultiSelect = (
+    value: string,
+    currentSelected: string[],
+    setter: (values: string[]) => void,
+    type: string,
+    options: string[],
+    event?: React.MouseEvent
+  ) => {
     let newValues: string[];
     
     if (value === 'Todos') {
       newValues = currentSelected.includes('Todos') ? [] : options;
     } else {
-      if (currentSelected.includes('Todos')) {
-        newValues = [value];
-      } else {
+      if (event?.ctrlKey) {
+        // CTRL + click behavior
         if (currentSelected.includes(value)) {
           newValues = currentSelected.filter(v => v !== value);
         } else {
           newValues = [...currentSelected, value];
-          if (newValues.length === options.length - 1) {
-            newValues = options;
-          }
         }
+      } else {
+        // Single click behavior
+        newValues = [value];
       }
     }
     
@@ -150,7 +156,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     label: string,
     options: string[],
     selected: string[],
-    onSelect: (value: string) => void,
+    onSelect: (value: string, event: React.MouseEvent) => void,
     filterKey: string
   ) => (
     <div className="relative">
@@ -161,9 +167,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       >
         {label}
         <span className="ml-2">
-          {selected.length > 0 ? 
-            (selected.includes('Todos') ? 'Todos' : `(${selected.length})`) 
-            : ''}
+          {selected.length > 0 ? `(${selected.length})` : ''}
         </span>
       </Button>
       {dropdownStates[filterKey as keyof typeof dropdownStates] && (
@@ -182,12 +186,21 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 className="h-8"
               />
             </div>
+            <div className="text-xs text-gray-500 mb-2">
+              Segure CTRL para selecionar múltiplos itens
+            </div>
             <div className="space-y-1 max-h-[200px] overflow-y-auto">
               {filterOptionsBySearch(options, searchTerms[filterKey]).map((option) => (
-                <div key={option} className="flex items-center space-x-2 p-1 hover:bg-gray-100 rounded">
+                <div
+                  key={option}
+                  className={`flex items-center space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer ${
+                    selected.includes(option) ? 'bg-gray-50' : ''
+                  }`}
+                  onClick={(e) => onSelect(option, e)}
+                >
                   <Checkbox
                     checked={selected.includes(option)}
-                    onCheckedChange={() => onSelect(option)}
+                    className="pointer-events-none"
                   />
                   <span className="text-sm">{option}</span>
                 </div>
@@ -206,7 +219,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Ano',
           ['Todos', '2024', '2025', '2026'],
           selectedYear,
-          (value) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', ['Todos', '2024', '2025', '2026']),
+          (value, event) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', ['Todos', '2024', '2025', '2026'], event),
           'year'
         )}
 
@@ -214,7 +227,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Tipo',
           ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
           selectedType,
-          (value) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO']),
+          (value, event) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'], event),
           'type'
         )}
 
@@ -222,7 +235,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Fábrica',
           filteredOptions?.fabrica || [],
           selectedFactory,
-          (value) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || []),
+          (value, event) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [], event),
           'fabrica'
         )}
 
@@ -230,7 +243,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Cód Produto',
           filteredOptions?.codigo || [],
           selectedCode,
-          (value) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || []),
+          (value, event) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [], event),
           'codigo'
         )}
 
@@ -238,7 +251,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Família 1',
           filteredOptions?.familia1 || [],
           selectedFamily1,
-          (value) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || []),
+          (value, event) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [], event),
           'familia1'
         )}
 
@@ -246,42 +259,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Família 2',
           filteredOptions?.familia2 || [],
           selectedFamily2,
-          (value) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || []),
+          (value, event) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [], event),
           'familia2'
         )}
-
-        <div className="flex flex-wrap gap-2">
-          {[
-            ...selectedYear.map(v => ({ value: v, type: 'ano', setter: setSelectedYear })),
-            ...selectedType.map(v => ({ value: v, type: 'tipo', setter: setSelectedType })),
-            ...selectedFactory.map(v => ({ value: v, type: 'fabrica', setter: setSelectedFactory })),
-            ...selectedCode.map(v => ({ value: v, type: 'codigo', setter: setSelectedCode })),
-            ...selectedFamily1.map(v => ({ value: v, type: 'familia1', setter: setSelectedFamily1 })),
-            ...selectedFamily2.map(v => ({ value: v, type: 'familia2', setter: setSelectedFamily2 }))
-          ].map(({ value, type, setter }) => (
-            <Badge key={`${type}-${value}`} variant="secondary">
-              {value}
-              <Button
-                variant="ghost"
-                className="h-4 w-4 p-0 ml-2"
-                onClick={() => handleMultiSelect(
-                  value,
-                  type === 'ano' ? selectedYear :
-                  type === 'tipo' ? selectedType :
-                  type === 'fabrica' ? selectedFactory :
-                  type === 'codigo' ? selectedCode :
-                  type === 'familia1' ? selectedFamily1 :
-                  selectedFamily2,
-                  setter,
-                  type,
-                  filteredOptions?.[type as keyof typeof filteredOptions] || []
-                )}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          ))}
-        </div>
       </div>
     </div>
   );
