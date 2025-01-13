@@ -18,10 +18,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [openStates, setOpenStates] = useState<{ [key: string]: boolean }>({});
   const [selectedValues, setSelectedValues] = useState<{ [key: string]: string[] }>({});
   const [filterOptions, setFilterOptions] = useState<{ [key: string]: string[] }>({});
+  const [allOptions, setAllOptions] = useState<{ [key: string]: string[] }>({});
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
+        console.log('Fetching initial filter options...');
         const { data: produtos, error } = await supabase
           .from('produtos')
           .select('empresa, marca, fabrica, familia1, familia2, produto');
@@ -46,14 +48,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           options.produto.add(produto.produto);
         });
 
-        setFilterOptions({
+        const initialOptions = {
           empresa: Array.from(options.empresa),
           marca: Array.from(options.marca),
           fabrica: Array.from(options.fabrica),
           familia1: Array.from(options.familia1),
           familia2: Array.from(options.familia2),
           produto: Array.from(options.produto),
-        });
+        };
+
+        setFilterOptions(initialOptions);
+        setAllOptions(initialOptions);
+        console.log('Initial filter options set:', initialOptions);
       } catch (error) {
         console.error('Error fetching filter options:', error);
       }
@@ -62,7 +68,74 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     fetchFilterOptions();
   }, []);
 
+  useEffect(() => {
+    const updateFilterOptions = async () => {
+      try {
+        console.log('Updating filter options based on selections:', selectedValues);
+        let query = supabase.from('produtos').select('empresa, marca, fabrica, familia1, familia2, produto');
+
+        // Apply existing filters
+        if (selectedValues.empresa?.length > 0) {
+          query = query.in('empresa', selectedValues.empresa);
+        }
+        if (selectedValues.marca?.length > 0) {
+          query = query.in('marca', selectedValues.marca);
+        }
+        if (selectedValues.fabrica?.length > 0) {
+          query = query.in('fabrica', selectedValues.fabrica);
+        }
+        if (selectedValues.familia1?.length > 0) {
+          query = query.in('familia1', selectedValues.familia1);
+        }
+        if (selectedValues.familia2?.length > 0) {
+          query = query.in('familia2', selectedValues.familia2);
+        }
+        if (selectedValues.produto?.length > 0) {
+          query = query.in('produto', selectedValues.produto);
+        }
+
+        const { data: produtos, error } = await query;
+
+        if (error) throw error;
+
+        const newOptions: { [key: string]: Set<string> } = {
+          empresa: new Set(),
+          marca: new Set(),
+          fabrica: new Set(),
+          familia1: new Set(),
+          familia2: new Set(),
+          produto: new Set(),
+        };
+
+        produtos?.forEach(produto => {
+          newOptions.empresa.add(produto.empresa);
+          newOptions.marca.add(produto.marca);
+          newOptions.fabrica.add(produto.fabrica);
+          newOptions.familia1.add(produto.familia1);
+          newOptions.familia2.add(produto.familia2);
+          newOptions.produto.add(produto.produto);
+        });
+
+        setFilterOptions({
+          empresa: Array.from(newOptions.empresa),
+          marca: Array.from(newOptions.marca),
+          fabrica: Array.from(newOptions.fabrica),
+          familia1: Array.from(newOptions.familia1),
+          familia2: Array.from(newOptions.familia2),
+          produto: Array.from(newOptions.produto),
+        });
+
+        console.log('Filter options updated based on selections');
+      } catch (error) {
+        console.error('Error updating filter options:', error);
+      }
+    };
+
+    updateFilterOptions();
+  }, [selectedValues]);
+
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
+    console.log('Checkbox changed:', { filterType, value, checked });
     let newValues: string[];
     
     if (value === 'all') {
