@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
+import { query } from '@/integrations/azure/client';
 
 export const useForecastMutations = (productId: string | undefined) => {
   const queryClient = useQueryClient();
@@ -14,24 +14,25 @@ export const useForecastMutations = (productId: string | undefined) => {
     }) => {
       if (!productId) throw new Error('Product ID not found');
 
-      const { error } = await supabase
-        .from('forecast_values')
-        .upsert(
-          {
-            produto_id: productId,
-            ano,
-            tipo,
-            id_tipo,
-            mes,
-            valor
-          },
-          {
-            onConflict: 'produto_id,ano,id_tipo,mes',
-            ignoreDuplicates: false
-          }
-        );
+      const result = await query(
+        `MERGE INTO forecast_values AS target
+         USING (SELECT @param0 as produto_id, @param1 as ano, @param2 as tipo, 
+                       @param3 as id_tipo, @param4 as mes, @param5 as valor) 
+         AS source (produto_id, ano, tipo, id_tipo, mes, valor)
+         ON target.produto_id = source.produto_id 
+            AND target.ano = source.ano 
+            AND target.id_tipo = source.id_tipo 
+            AND target.mes = source.mes
+         WHEN MATCHED THEN
+           UPDATE SET valor = source.valor
+         WHEN NOT MATCHED THEN
+           INSERT (produto_id, ano, tipo, id_tipo, mes, valor)
+           VALUES (source.produto_id, source.ano, source.tipo, 
+                  source.id_tipo, source.mes, source.valor);`,
+        [productId, ano, tipo, id_tipo, mes, valor]
+      );
 
-      if (error) throw error;
+      if (!result) throw new Error('Failed to update forecast value');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });

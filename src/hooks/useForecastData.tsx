@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
+import { query } from '@/integrations/azure/client';
 
 export const useForecastData = (produto: string) => {
   // Product data query
@@ -8,18 +8,17 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching product data for:', produto);
       try {
-        const { data, error } = await supabase
-          .from('produtos')
-          .select('id')
-          .eq('produto', produto)
-          .maybeSingle();
+        const data = await query<{ id: string }>(
+          'SELECT id FROM produtos WHERE produto = @param0',
+          [produto]
+        );
         
-        if (error) {
-          console.error('Error fetching product:', error);
-          throw error;
+        if (!data.length) {
+          console.log('No product found');
+          return null;
         }
-        console.log('Product data fetched:', data);
-        return data;
+        console.log('Product data fetched:', data[0]);
+        return data[0];
       } catch (error) {
         console.error('Exception in product fetch:', error);
         throw error;
@@ -34,16 +33,9 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching grupos');
       try {
-        const { data, error } = await supabase
-          .from('grupos')
-          .select('*')
-          .order('ano')
-          .order('id_tipo');
-        
-        if (error) {
-          console.error('Error fetching grupos:', error);
-          throw error;
-        }
+        const data = await query(
+          'SELECT * FROM grupos ORDER BY ano, id_tipo'
+        );
         console.log('Grupos fetched:', data);
         return data;
       } catch (error) {
@@ -60,16 +52,9 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching month configurations');
       try {
-        const { data, error } = await supabase
-          .from('month_configurations')
-          .select('*')
-          .order('ano')
-          .order('mes');
-        
-        if (error) {
-          console.error('Error fetching month configurations:', error);
-          throw error;
-        }
+        const data = await query(
+          'SELECT * FROM month_configurations ORDER BY ano, mes'
+        );
 
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
         data.forEach(config => {
@@ -79,7 +64,7 @@ export const useForecastData = (produto: string) => {
           configByYear[config.ano][config.mes] = {
             mes: config.mes,
             pct_atual: config.pct_atual,
-            realizado: config.realizado
+            realizado: config.realizado === 1 // Convert bit to boolean
           };
         });
         
@@ -104,15 +89,10 @@ export const useForecastData = (produto: string) => {
       
       console.log('Fetching forecast values for product ID:', productData.id);
       try {
-        const { data, error } = await supabase
-          .from('forecast_values')
-          .select('*')
-          .eq('produto_id', productData.id);
-        
-        if (error) {
-          console.error('Error fetching forecast values:', error);
-          throw error;
-        }
+        const data = await query(
+          'SELECT * FROM forecast_values WHERE produto_id = @param0',
+          [productData.id]
+        );
         
         const transformedData: { [key: string]: { [key: string]: number } } = {};
         
