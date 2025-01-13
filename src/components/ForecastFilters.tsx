@@ -43,55 +43,14 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     familia2: false
   });
 
-  const { data: filterOptions } = useQuery({
-    queryKey: ['filter-options'],
+  const { data: initialOptions } = useQuery({
+    queryKey: ['initial-filter-options'],
     queryFn: async () => {
-      console.log('Fetching filter options');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
 
-      if (error) {
-        console.error('Error fetching filter options:', error);
-        throw error;
-      }
-
-      const uniqueOptions = {
-        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
-        fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
-        familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
-        familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
-      };
-
-      console.log('Filter options fetched:', uniqueOptions);
-      return uniqueOptions;
-    }
-  });
-
-  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
-    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
-    queryFn: async () => {
-      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
-
-      if (selectedFactory.length > 0 && !selectedFactory.includes('Todos')) {
-        query = query.in('fabrica', selectedFactory);
-      }
-      if (selectedCode.length > 0 && !selectedCode.includes('Todos')) {
-        query = query.in('codigo', selectedCode);
-      }
-      if (selectedFamily1.length > 0 && !selectedFamily1.includes('Todos')) {
-        query = query.in('familia1', selectedFamily1);
-      }
-      if (selectedFamily2.length > 0 && !selectedFamily2.includes('Todos')) {
-        query = query.in('familia2', selectedFamily2);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching filtered options:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       return {
         codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
@@ -99,8 +58,59 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
         familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
       };
+    }
+  });
+
+  const { data: filteredOptions, isLoading } = useQuery({
+    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
+    queryFn: async () => {
+      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
+
+      // Apply all filters except 'Todos'
+      const filters = [
+        { field: 'fabrica', values: selectedFactory },
+        { field: 'codigo', values: selectedCode },
+        { field: 'familia1', values: selectedFamily1 },
+        { field: 'familia2', values: selectedFamily2 }
+      ];
+
+      filters.forEach(({ field, values }) => {
+        if (values.length > 0 && !values.includes('Todos')) {
+          query = query.in(field, values);
+        }
+      });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Create filtered options based on the query results
+      return {
+        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
+        fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
+        familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
+        familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
+      };
     },
-    enabled: !!filterOptions
+    enabled: !!initialOptions,
+    // Reset selections if they're no longer valid in filtered options
+    onSuccess: (data) => {
+      if (selectedFactory.length > 0 && !selectedFactory.every(f => data.fabrica.includes(f))) {
+        setSelectedFactory([]);
+        onFilterChange('fabrica', []);
+      }
+      if (selectedCode.length > 0 && !selectedCode.every(c => data.codigo.includes(c))) {
+        setSelectedCode([]);
+        onFilterChange('codigo', []);
+      }
+      if (selectedFamily1.length > 0 && !selectedFamily1.every(f => data.familia1.includes(f))) {
+        setSelectedFamily1([]);
+        onFilterChange('familia1', []);
+      }
+      if (selectedFamily2.length > 0 && !selectedFamily2.every(f => data.familia2.includes(f))) {
+        setSelectedFamily2([]);
+        onFilterChange('familia2', []);
+      }
+    }
   });
 
   useEffect(() => {
@@ -233,9 +243,16 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
         {renderFilterDropdown(
           'Fábrica',
-          filteredOptions?.fabrica || [],
+          (filteredOptions?.fabrica || initialOptions?.fabrica || []),
           selectedFactory,
-          (value, event) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [], event),
+          (value, event) => handleMultiSelect(
+            value, 
+            selectedFactory, 
+            setSelectedFactory, 
+            'fabrica', 
+            filteredOptions?.fabrica || initialOptions?.fabrica || [],
+            event
+          ),
           'fabrica'
         )}
 
