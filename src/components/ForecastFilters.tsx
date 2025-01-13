@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -19,16 +19,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [openStates, setOpenStates] = useState<{ [key: string]: boolean }>({});
   const [selectedValues, setSelectedValues] = useState<{ [key: string]: string[] }>({});
 
-  // Fetch all products once
-  const { data: allProducts, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['produtos'],
+  // Fetch all products once with caching
+  const { data: allProducts, isLoading } = useQuery({
+    queryKey: ['produtos-all'],
     queryFn: async () => {
       console.log('Fetching all products...');
       const { data, error } = await supabase
         .from('produtos')
-        .select('empresa, marca, fabrica, familia1, familia2, produto');
+        .select('empresa, marca, fabrica, familia1, familia2, produto')
+        .order('produto');
       
       if (error) throw error;
+      console.log('All products fetched:', data);
       return data;
     },
     staleTime: 30000, // Cache for 30 seconds
@@ -40,50 +42,28 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
     let filteredProducts = allProducts;
 
-    // Apply filters sequentially
-    if (selectedValues.empresa?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.empresa.includes(p.empresa)
-      );
-    }
-    if (selectedValues.marca?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.marca.includes(p.marca)
-      );
-    }
-    if (selectedValues.fabrica?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.fabrica.includes(p.fabrica)
-      );
-    }
-    if (selectedValues.familia1?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.familia1.includes(p.familia1)
-      );
-    }
-    if (selectedValues.familia2?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.familia2.includes(p.familia2)
-      );
-    }
-    if (selectedValues.produto?.length) {
-      filteredProducts = filteredProducts.filter(p => 
-        selectedValues.produto.includes(p.produto)
-      );
-    }
+    // Apply filters sequentially based on selected values
+    const filterTypes = ['empresa', 'marca', 'fabrica', 'familia1', 'familia2', 'produto'];
+    
+    filterTypes.forEach(filterType => {
+      if (selectedValues[filterType]?.length) {
+        filteredProducts = filteredProducts.filter(p => 
+          selectedValues[filterType].includes(p[filterType])
+        );
+      }
+    });
 
-    // Extract unique values for each filter
-    const options = {
-      empresa: Array.from(new Set(filteredProducts.map(p => p.empresa))),
-      marca: Array.from(new Set(filteredProducts.map(p => p.marca))),
-      fabrica: Array.from(new Set(filteredProducts.map(p => p.fabrica))),
-      familia1: Array.from(new Set(filteredProducts.map(p => p.familia1))),
-      familia2: Array.from(new Set(filteredProducts.map(p => p.familia2))),
-      produto: Array.from(new Set(filteredProducts.map(p => p.produto))),
+    // Extract unique values for each filter from filtered products
+    return {
+      empresa: Array.from(new Set(filteredProducts.map(p => p.empresa))).sort(),
+      marca: Array.from(new Set(filteredProducts.map(p => p.marca))).sort(),
+      fabrica: Array.from(new Set(filteredProducts.map(p => p.fabrica))).sort(),
+      familia1: Array.from(new Set(filteredProducts.map(p => p.familia1))).sort(),
+      familia2: Array.from(new Set(filteredProducts.map(p => p.familia2))).sort(),
+      produto: Array.from(new Set(filteredProducts.map(p => p.produto))).sort(),
+      tipo: ['ORÇAMENTO', 'REAL', 'REVISÃO', 'PO', 'SI'].sort(),
+      ano: ['2024', '2025', '2026'].sort(),
     };
-
-    console.log('Calculated filter options:', options);
-    return options;
   }, [allProducts, selectedValues]);
 
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
@@ -125,8 +105,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
-            className="w-full justify-between border-blue-200 bg-white hover:bg-blue-50/50 hover:border-blue-300 transition-all duration-300"
-            disabled={isLoadingProducts}
+            className={`w-full justify-between border-blue-200 hover:bg-blue-50/50 hover:border-blue-300 transition-all duration-300
+              ${isLoading ? 'opacity-50 cursor-not-allowed' : 'bg-white'}`}
+            disabled={isLoading}
           >
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm text-blue-900">{label}</span>
@@ -191,24 +172,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       </Popover>
     );
   };
-
-  if (isLoadingProducts) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 p-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50">
-        {['Empresa', 'Marca', 'Fábrica', 'Família 1', 'Família 2', 'Produto', 'Tipo', 'Ano'].map((label) => (
-          <Button
-            key={label}
-            variant="outline"
-            className="w-full justify-between border-blue-200 bg-white opacity-50"
-            disabled
-          >
-            <span className="font-medium text-sm text-blue-900">{label}</span>
-            <ChevronDown className="h-4 w-4 text-blue-500" />
-          </Button>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 p-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300">
