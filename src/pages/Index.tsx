@@ -65,13 +65,6 @@ const IndexContent = () => {
     setShowFilters(!showFilters);
   };
 
-  const shouldShowProduct = (produto: string) => {
-    if (filters.produto.length > 0 && !filters.produto.includes(produto)) {
-      return false;
-    }
-    return true;
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -129,25 +122,35 @@ const IndexContent = () => {
                 >
                   <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
                   <ForecastTable 
-                    produto={produto} 
+                    produto={produto}
                     anoFiltro={filters.ano}
                     tipoFiltro={filters.tipo}
+                    empresaFiltro={filters.empresa}
+                    marcaFiltro={filters.marca}
+                    fabricaFiltro={filters.fabrica}
+                    familia1Filtro={filters.familia1}
+                    familia2Filtro={filters.familia2}
                   />
                 </div>
               ))}
             </>
           ) : (
             <>
-              {produtos?.map(produto => shouldShowProduct(produto) && (
+              {produtos?.map(produto => (
                 <div 
                   key={produto} 
                   className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
                 >
                   <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
                   <ForecastTable 
-                    produto={produto} 
+                    produto={produto}
                     anoFiltro={filters.ano}
                     tipoFiltro={filters.tipo}
+                    empresaFiltro={filters.empresa}
+                    marcaFiltro={filters.marca}
+                    fabricaFiltro={filters.fabrica}
+                    familia1Filtro={filters.familia1}
+                    familia2Filtro={filters.familia2}
                   />
                 </div>
               ))}
