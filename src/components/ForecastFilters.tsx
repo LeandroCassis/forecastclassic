@@ -10,8 +10,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Check } from "lucide-react";
+import { X, Check, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
@@ -26,6 +27,14 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [selectedFamily2, setSelectedFamily2] = useState<string[]>([]);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
+    year: '',
+    type: '',
+    fabrica: '',
+    codigo: '',
+    familia1: '',
+    familia2: '',
+  });
 
   const { data: filterOptions } = useQuery({
     queryKey: ['filter-options'],
@@ -91,23 +100,36 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     refetchFilteredOptions();
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
-  const handleMultiSelect = (value: string, currentSelected: string[], setter: (values: string[]) => void, type: string) => {
+  const handleMultiSelect = (value: string, currentSelected: string[], setter: (values: string[]) => void, type: string, options: string[]) => {
     let newValues: string[];
     
     if (value === 'Todos') {
-      newValues = currentSelected.includes('Todos') ? [] : ['Todos'];
+      newValues = currentSelected.includes('Todos') ? [] : options;
     } else {
       if (currentSelected.includes('Todos')) {
         newValues = [value];
       } else {
-        newValues = currentSelected.includes(value)
-          ? currentSelected.filter(v => v !== value)
-          : [...currentSelected, value];
+        if (currentSelected.includes(value)) {
+          newValues = currentSelected.filter(v => v !== value);
+        } else {
+          newValues = [...currentSelected, value];
+          if (newValues.length === options.length - 1) {
+            newValues = options;
+          }
+        }
       }
     }
     
     setter(newValues);
     onFilterChange(type, newValues);
+  };
+
+  const filterOptionsBySearch = (options: string[], searchTerm: string) => {
+    if (!searchTerm) return options;
+    return options.filter(option => 
+      option.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option === 'Todos'
+    );
   };
 
   const renderFilterDropdown = (
@@ -116,7 +138,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     selected: string[],
     onSelect: (value: string) => void,
     isOpen: boolean,
-    setIsOpen: (open: boolean) => void
+    setIsOpen: (open: boolean) => void,
+    filterKey: string
   ) => (
     <div className="relative">
       <Button
@@ -125,20 +148,39 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         className="w-[180px] justify-between"
       >
         {label}
-        <span className="ml-2">{selected.length > 0 ? `(${selected.length})` : ''}</span>
+        <span className="ml-2">
+          {selected.length > 0 ? 
+            (selected.includes('Todos') ? 'Todos' : `(${selected.length})`) 
+            : ''}
+        </span>
       </Button>
       {isOpen && (
-        <div className="absolute z-50 w-[200px] mt-2 bg-white border rounded-md shadow-lg">
-          <div className="p-2 space-y-1">
-            {options.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  checked={selected.includes(option)}
-                  onCheckedChange={() => onSelect(option)}
-                />
-                <span>{option}</span>
-              </div>
-            ))}
+        <div className="absolute z-50 w-[250px] mt-2 bg-white border rounded-md shadow-lg">
+          <div className="p-2">
+            <div className="flex items-center space-x-2 mb-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchTerms[filterKey]}
+                onChange={(e) => setSearchTerms(prev => ({
+                  ...prev,
+                  [filterKey]: e.target.value
+                }))}
+                className="h-8"
+              />
+            </div>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+              {filterOptionsBySearch(options, searchTerms[filterKey]).map((option) => (
+                <div key={option} className="flex items-center space-x-2 p-1 hover:bg-gray-100 rounded">
+                  <Checkbox
+                    checked={selected.includes(option)}
+                    onCheckedChange={() => onSelect(option)}
+                  />
+                  <span className="text-sm">{option}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -150,26 +192,28 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       <div className="flex flex-wrap gap-4">
         {renderFilterDropdown(
           'Ano',
-          ['2024', '2025', '2026'],
+          ['Todos', '2024', '2025', '2026'],
           selectedYear,
-          (value) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano'),
+          (value) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', ['Todos', '2024', '2025', '2026']),
           isYearOpen,
-          setIsYearOpen
+          setIsYearOpen,
+          'year'
         )}
 
         {renderFilterDropdown(
           'Tipo',
-          ['REAL', 'REVISÃO', 'ORÇAMENTO'],
+          ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
           selectedType,
-          (value) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo'),
+          (value) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO']),
           isTypeOpen,
-          setIsTypeOpen
+          setIsTypeOpen,
+          'type'
         )}
 
         <div className="space-y-2">
           <Select
             value={selectedFactory[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica')}
+            onValueChange={(value) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [])}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Fábrica" />
@@ -195,7 +239,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 <Button
                   variant="ghost"
                   className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica')}
+                  onClick={() => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [])}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -207,7 +251,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         <div className="space-y-2">
           <Select
             value={selectedCode[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo')}
+            onValueChange={(value) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [])}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Cód Produto" />
@@ -233,7 +277,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 <Button
                   variant="ghost"
                   className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo')}
+                  onClick={() => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [])}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -245,7 +289,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         <div className="space-y-2">
           <Select
             value={selectedFamily1[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1')}
+            onValueChange={(value) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [])}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Família 1" />
@@ -271,7 +315,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 <Button
                   variant="ghost"
                   className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1')}
+                  onClick={() => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [])}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -283,7 +327,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         <div className="space-y-2">
           <Select
             value={selectedFamily2[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2')}
+            onValueChange={(value) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [])}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Família 2" />
@@ -309,7 +353,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 <Button
                   variant="ghost"
                   className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2')}
+                  onClick={() => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [])}
                 >
                   <X className="h-3 w-3" />
                 </Button>
