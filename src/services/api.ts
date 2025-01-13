@@ -1,35 +1,46 @@
-import { toast } from "@/components/ui/use-toast";
+import sql from 'mssql';
 
-const API_BASE_URL = '/api';
+const config = {
+  server: 'vesperttine-server.database.windows.net',
+  database: 'VESPERTTINE',
+  user: 'vesperttine',
+  password: '840722aA',
+  options: {
+    encrypt: true,
+    trustServerCertificate: false
+  }
+};
 
-interface QueryResponse<T> {
-  data: T[];
-  error: string | null;
+let pool: sql.ConnectionPool | null = null;
+
+async function getConnection() {
+  try {
+    if (!pool) {
+      pool = await new sql.ConnectionPool(config).connect();
+      console.log('Connected to Azure SQL Database');
+    }
+    return pool;
+  } catch (err) {
+    console.error('Error connecting to Azure SQL:', err);
+    throw err;
+  }
 }
 
-export async function query<T>(queryString: string, params?: any[]): Promise<QueryResponse<T>> {
+export async function executeQuery(queryString: string, params?: any[]) {
   try {
-    const response = await fetch(`${API_BASE_URL}/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: queryString, params }),
-    });
+    const pool = await getConnection();
+    const request = pool.request();
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (params) {
+      params.forEach((param, index) => {
+        request.input(`param${index}`, param);
+      });
     }
 
-    const data = await response.json();
-    return { data, error: null };
+    const result = await request.query(queryString);
+    return result.recordset;
   } catch (error) {
-    console.error('API query error:', error);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to fetch data. Please try again later.",
-    });
-    return { data: [], error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('Error executing query:', error);
+    throw error;
   }
 }
