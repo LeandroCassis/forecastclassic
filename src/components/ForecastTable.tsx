@@ -9,33 +9,13 @@ interface ForecastTableProps {
   produto: string;
   anoFiltro?: string[];
   tipoFiltro?: string[];
-  empresaFiltro?: string[];
-  marcaFiltro?: string[];
-  fabricaFiltro?: string[];
-  familia1Filtro?: string[];
-  familia2Filtro?: string[];
 }
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-const ForecastTable: React.FC<ForecastTableProps> = ({ 
-  produto, 
-  anoFiltro, 
-  tipoFiltro,
-  empresaFiltro,
-  marcaFiltro,
-  fabricaFiltro,
-  familia1Filtro,
-  familia2Filtro
-}) => {
+const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
-  const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto, {
-    empresaFiltro,
-    marcaFiltro,
-    fabricaFiltro,
-    familia1Filtro,
-    familia2Filtro
-  });
+  const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto);
   const { updateMutation } = useForecastMutations(productData?.id);
   const { toast } = useToast();
 

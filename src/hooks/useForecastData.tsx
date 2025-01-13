@@ -1,43 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 
-interface FilterOptions {
-  empresaFiltro?: string[];
-  marcaFiltro?: string[];
-  fabricaFiltro?: string[];
-  familia1Filtro?: string[];
-  familia2Filtro?: string[];
-}
-
-export const useForecastData = (produto: string, filters?: FilterOptions) => {
+export const useForecastData = (produto: string) => {
   // Product data query
   const { data: productData, isError: productError } = useQuery({
-    queryKey: ['product', produto, filters],
+    queryKey: ['product', produto],
     queryFn: async () => {
-      console.log('Fetching product data for:', produto, 'with filters:', filters);
+      console.log('Fetching product data for:', produto);
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('produtos')
-          .select('*')
-          .eq('produto', produto);
-
-        if (filters?.empresaFiltro?.length) {
-          query = query.in('empresa', filters.empresaFiltro);
-        }
-        if (filters?.marcaFiltro?.length) {
-          query = query.in('marca', filters.marcaFiltro);
-        }
-        if (filters?.fabricaFiltro?.length) {
-          query = query.in('fabrica', filters.fabricaFiltro);
-        }
-        if (filters?.familia1Filtro?.length) {
-          query = query.in('familia1', filters.familia1Filtro);
-        }
-        if (filters?.familia2Filtro?.length) {
-          query = query.in('familia2', filters.familia2Filtro);
-        }
-
-        const { data, error } = await query.maybeSingle();
+          .select('id')
+          .eq('produto', produto)
+          .maybeSingle();
         
         if (error) {
           console.error('Error fetching product:', error);
