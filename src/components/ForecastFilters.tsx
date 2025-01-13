@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { X, Check, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { X, Check, Search } from "lucide-react";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
@@ -43,25 +35,29 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     familia2: false
   });
 
-  const { data: initialOptions } = useQuery({
+  const { data: initialOptions, isLoading: initialLoading } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
+      console.log('Fetching filter options');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
 
       if (error) throw error;
 
-      return {
+      const options = {
         codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
         fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
         familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
         familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
       };
+      
+      console.log('Filter options fetched:', options);
+      return options;
     }
   });
 
-  const { data: filteredOptions, isLoading } = useQuery({
+  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
@@ -83,7 +79,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Create filtered options based on the query results
       return {
         codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
         fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
@@ -91,30 +86,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
       };
     },
-    enabled: !!initialOptions,
-    // Reset selections if they're no longer valid in filtered options
-    onSuccess: (data) => {
-      if (selectedFactory.length > 0 && !selectedFactory.every(f => data.fabrica.includes(f))) {
-        setSelectedFactory([]);
-        onFilterChange('fabrica', []);
-      }
-      if (selectedCode.length > 0 && !selectedCode.every(c => data.codigo.includes(c))) {
-        setSelectedCode([]);
-        onFilterChange('codigo', []);
-      }
-      if (selectedFamily1.length > 0 && !selectedFamily1.every(f => data.familia1.includes(f))) {
-        setSelectedFamily1([]);
-        onFilterChange('familia1', []);
-      }
-      if (selectedFamily2.length > 0 && !selectedFamily2.every(f => data.familia2.includes(f))) {
-        setSelectedFamily2([]);
-        onFilterChange('familia2', []);
-      }
-    }
+    enabled: !!initialOptions
   });
 
   useEffect(() => {
-    refetchFilteredOptions();
+    if (refetchFilteredOptions) {
+      refetchFilteredOptions();
+    }
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
   const handleMultiSelect = (
@@ -131,14 +109,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       newValues = currentSelected.includes('Todos') ? [] : options;
     } else {
       if (event?.ctrlKey) {
-        // CTRL + click behavior
         if (currentSelected.includes(value)) {
           newValues = currentSelected.filter(v => v !== value);
         } else {
           newValues = [...currentSelected, value];
         }
       } else {
-        // Single click behavior
         newValues = [value];
       }
     }
@@ -258,25 +234,46 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
         {renderFilterDropdown(
           'Cód Produto',
-          filteredOptions?.codigo || [],
+          filteredOptions?.codigo || initialOptions?.codigo || [],
           selectedCode,
-          (value, event) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [], event),
+          (value, event) => handleMultiSelect(
+            value, 
+            selectedCode, 
+            setSelectedCode, 
+            'codigo', 
+            filteredOptions?.codigo || initialOptions?.codigo || [],
+            event
+          ),
           'codigo'
         )}
 
         {renderFilterDropdown(
           'Família 1',
-          filteredOptions?.familia1 || [],
+          filteredOptions?.familia1 || initialOptions?.familia1 || [],
           selectedFamily1,
-          (value, event) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [], event),
+          (value, event) => handleMultiSelect(
+            value, 
+            selectedFamily1, 
+            setSelectedFamily1, 
+            'familia1', 
+            filteredOptions?.familia1 || initialOptions?.familia1 || [],
+            event
+          ),
           'familia1'
         )}
 
         {renderFilterDropdown(
           'Família 2',
-          filteredOptions?.familia2 || [],
+          filteredOptions?.familia2 || initialOptions?.familia2 || [],
           selectedFamily2,
-          (value, event) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [], event),
+          (value, event) => handleMultiSelect(
+            value, 
+            selectedFamily2, 
+            setSelectedFamily2, 
+            'familia2', 
+            filteredOptions?.familia2 || initialOptions?.familia2 || [],
+            event
+          ),
           'familia2'
         )}
       </div>
