@@ -18,7 +18,7 @@ export const useForecastData = (produto: string, filters?: FilterOptions) => {
       try {
         let query = supabase
           .from('produtos')
-          .select('id')
+          .select('*')
           .eq('produto', produto);
 
         if (filters?.empresaFiltro?.length) {
@@ -37,7 +37,7 @@ export const useForecastData = (produto: string, filters?: FilterOptions) => {
           query = query.in('familia2', filters.familia2Filtro);
         }
 
-        const { data, error } = await query.maybeSingle();
+        const { data, error } = await query.single();
         
         if (error) {
           console.error('Error fetching product:', error);

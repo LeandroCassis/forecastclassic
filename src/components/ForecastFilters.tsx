@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
@@ -16,6 +17,50 @@ interface ForecastFiltersProps {
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
   const [openStates, setOpenStates] = useState<{ [key: string]: boolean }>({});
   const [selectedValues, setSelectedValues] = useState<{ [key: string]: string[] }>({});
+  const [filterOptions, setFilterOptions] = useState<{ [key: string]: string[] }>({});
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const { data: produtos, error } = await supabase
+          .from('produtos')
+          .select('empresa, marca, fabrica, familia1, familia2, produto');
+
+        if (error) throw error;
+
+        const options: { [key: string]: Set<string> } = {
+          empresa: new Set(),
+          marca: new Set(),
+          fabrica: new Set(),
+          familia1: new Set(),
+          familia2: new Set(),
+          produto: new Set(),
+        };
+
+        produtos.forEach(produto => {
+          options.empresa.add(produto.empresa);
+          options.marca.add(produto.marca);
+          options.fabrica.add(produto.fabrica);
+          options.familia1.add(produto.familia1);
+          options.familia2.add(produto.familia2);
+          options.produto.add(produto.produto);
+        });
+
+        setFilterOptions({
+          empresa: Array.from(options.empresa),
+          marca: Array.from(options.marca),
+          fabrica: Array.from(options.fabrica),
+          familia1: Array.from(options.familia1),
+          familia2: Array.from(options.familia2),
+          produto: Array.from(options.produto),
+        });
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+
+    fetchFilterOptions();
+  }, []);
 
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
     let newValues: string[];
@@ -40,9 +85,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const renderFilterGroup = (
     label: string, 
-    filterType: string, 
-    options: { value: string; label: string }[]
+    filterType: string
   ) => {
+    const options = filterOptions[filterType] || [];
     const selectedCount = selectedValues[filterType]?.length || 0;
     const allSelected = selectedCount === options.length;
     const someSelected = selectedCount > 0 && selectedCount < options.length;
@@ -82,7 +127,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                     filterType, 
                     'all', 
                     checked as boolean, 
-                    options.map(opt => opt.value)
+                    options
                   )
                 }
               />
@@ -97,19 +142,19 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <ScrollArea className="h-[200px] p-2">
             <div className="space-y-2">
               {options.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div key={option} className="flex items-center space-x-2">
                   <Checkbox 
-                    id={`${filterType}-${option.value}`}
-                    checked={selectedValues[filterType]?.includes(option.value)}
+                    id={`${filterType}-${option}`}
+                    checked={selectedValues[filterType]?.includes(option)}
                     onCheckedChange={(checked) => 
-                      handleCheckboxChange(filterType, option.value, checked as boolean, [])
+                      handleCheckboxChange(filterType, option, checked as boolean, [])
                     }
                   />
                   <label 
-                    htmlFor={`${filterType}-${option.value}`}
+                    htmlFor={`${filterType}-${option}`}
                     className="text-sm font-medium leading-none text-slate-700 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {option.label}
+                    {option}
                   </label>
                 </div>
               ))}
@@ -122,48 +167,14 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 p-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300">
-      {renderFilterGroup('Empresa', 'empresa', [
-        { value: 'empresa1', label: 'Empresa 1' },
-        { value: 'empresa2', label: 'Empresa 2' },
-      ])}
-
-      {renderFilterGroup('Marca', 'marca', [
-        { value: 'marca1', label: 'Marca 1' },
-        { value: 'marca2', label: 'Marca 2' },
-      ])}
-
-      {renderFilterGroup('Fábrica', 'fabrica', [
-        { value: 'fabrica1', label: 'Fábrica 1' },
-        { value: 'fabrica2', label: 'Fábrica 2' },
-      ])}
-
-      {renderFilterGroup('Família 1', 'familia1', [
-        { value: 'familia1_1', label: 'Família 1.1' },
-        { value: 'familia1_2', label: 'Família 1.2' },
-      ])}
-
-      {renderFilterGroup('Família 2', 'familia2', [
-        { value: 'familia2_1', label: 'Família 2.1' },
-        { value: 'familia2_2', label: 'Família 2.2' },
-      ])}
-
-      {renderFilterGroup('Produto', 'produto', [
-        { value: 'VIOLÃO 12323', label: 'VIOLÃO 12323' },
-        { value: 'VIOLÃO 344334', label: 'VIOLÃO 344334' },
-        { value: 'VIOLÃO TRTRTRR', label: 'VIOLÃO TRTRTRR' },
-      ])}
-
-      {renderFilterGroup('Tipo', 'tipo', [
-        { value: 'REAL', label: 'REAL' },
-        { value: 'REVISÃO', label: 'REVISÃO' },
-        { value: 'ORÇAMENTO', label: 'ORÇAMENTO' },
-      ])}
-
-      {renderFilterGroup('Ano', 'ano', [
-        { value: '2024', label: '2024' },
-        { value: '2025', label: '2025' },
-        { value: '2026', label: '2026' },
-      ])}
+      {renderFilterGroup('Empresa', 'empresa')}
+      {renderFilterGroup('Marca', 'marca')}
+      {renderFilterGroup('Fábrica', 'fabrica')}
+      {renderFilterGroup('Família 1', 'familia1')}
+      {renderFilterGroup('Família 2', 'familia2')}
+      {renderFilterGroup('Produto', 'produto')}
+      {renderFilterGroup('Tipo', 'tipo')}
+      {renderFilterGroup('Ano', 'ano')}
     </div>
   );
 };
