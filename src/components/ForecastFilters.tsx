@@ -33,7 +33,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   });
 
   // Fetch all products once with caching
-  const { data: allProducts, isLoading } = useQuery({
+  const { data: allProducts = [], isLoading } = useQuery({
     queryKey: ['produtos-all'],
     queryFn: async () => {
       console.log('Fetching all products...');
@@ -51,7 +51,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   // Memoized filter options based on current selections
   const filterOptions = useMemo(() => {
-    if (!allProducts) return {
+    if (!allProducts?.length) return {
       codigos: [],
       empresas: [],
       produtos: [],
