@@ -1,25 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
-  // State for each filter (now arrays for multi-select)
+  // State for each filter (arrays for multi-select)
   const [selectedCodigos, setSelectedCodigos] = useState<string[]>([]);
   const [selectedEmpresas, setSelectedEmpresas] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
@@ -68,7 +61,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       familias2: [],
     };
 
-    let filteredProducts = allProducts;
+    let filteredProducts = [...allProducts];
 
     // Apply cascading filters
     if (selectedCodigos.length > 0) {
@@ -95,13 +88,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
     // Get unique values for each filter
     return {
-      codigos: [...new Set(allProducts.map(p => p.codigo))].sort(),
-      empresas: [...new Set(filteredProducts.map(p => p.empresa))].sort(),
-      produtos: [...new Set(filteredProducts.map(p => p.produto))].sort(),
-      marcas: [...new Set(filteredProducts.map(p => p.marca))].sort(),
-      fabricas: [...new Set(filteredProducts.map(p => p.fabrica))].sort(),
-      familias1: [...new Set(filteredProducts.map(p => p.familia1))].sort(),
-      familias2: [...new Set(filteredProducts.map(p => p.familia2))].sort(),
+      codigos: [...new Set(allProducts.map(p => p.codigo))].filter(Boolean).sort(),
+      empresas: [...new Set(filteredProducts.map(p => p.empresa))].filter(Boolean).sort(),
+      produtos: [...new Set(filteredProducts.map(p => p.produto))].filter(Boolean).sort(),
+      marcas: [...new Set(filteredProducts.map(p => p.marca))].filter(Boolean).sort(),
+      fabricas: [...new Set(filteredProducts.map(p => p.fabrica))].filter(Boolean).sort(),
+      familias1: [...new Set(filteredProducts.map(p => p.familia1))].filter(Boolean).sort(),
+      familias2: [...new Set(filteredProducts.map(p => p.familia2))].filter(Boolean).sort(),
     };
   }, [allProducts, selectedCodigos, selectedEmpresas, selectedProdutos, selectedMarcas, selectedFabricas, selectedFamilias1, selectedFamilias2]);
 
@@ -194,7 +187,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <CommandInput placeholder={`Buscar ${label.toLowerCase()}...`} />
           <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
-            {options.map((option) => (
+            {(options || []).map((option) => (
               <CommandItem
                 key={option}
                 value={option}
