@@ -36,35 +36,45 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     staleTime: 30000, // Cache for 30 seconds
   });
 
-  // Calculate available options based on current selections
-  const filterOptions = useMemo(() => {
-    if (!allProducts) return {};
+  // Calculate filtered products based on current selections
+  const filteredProducts = useMemo(() => {
+    if (!allProducts) return [];
 
-    let filteredProducts = allProducts;
-
-    // Apply filters sequentially based on selected values
-    const filterTypes = ['empresa', 'marca', 'fabrica', 'familia1', 'familia2', 'produto'];
-    
-    filterTypes.forEach(filterType => {
-      if (selectedValues[filterType]?.length) {
-        filteredProducts = filteredProducts.filter(p => 
-          selectedValues[filterType].includes(p[filterType])
-        );
-      }
+    return allProducts.filter(product => {
+      const filterTypes = ['empresa', 'marca', 'fabrica', 'familia1', 'familia2', 'produto'];
+      return filterTypes.every(filterType => {
+        const selectedFilterValues = selectedValues[filterType];
+        return !selectedFilterValues?.length || selectedFilterValues.includes(product[filterType]);
+      });
     });
-
-    // Extract unique values for each filter from filtered products
-    return {
-      empresa: Array.from(new Set(filteredProducts.map(p => p.empresa))).sort(),
-      marca: Array.from(new Set(filteredProducts.map(p => p.marca))).sort(),
-      fabrica: Array.from(new Set(filteredProducts.map(p => p.fabrica))).sort(),
-      familia1: Array.from(new Set(filteredProducts.map(p => p.familia1))).sort(),
-      familia2: Array.from(new Set(filteredProducts.map(p => p.familia2))).sort(),
-      produto: Array.from(new Set(filteredProducts.map(p => p.produto))).sort(),
-      tipo: ['ORÇAMENTO', 'REAL', 'REVISÃO', 'PO', 'SI'].sort(),
-      ano: ['2024', '2025', '2026'].sort(),
-    };
   }, [allProducts, selectedValues]);
+
+  // Calculate available options for each filter based on filtered products
+  const filterOptions = useMemo(() => {
+    const options: { [key: string]: string[] } = {};
+    
+    if (!filteredProducts.length) return {};
+
+    // Helper function to get unique values for a field from filtered products
+    const getUniqueValues = (field: string) => {
+      const values = new Set(filteredProducts.map(p => p[field]));
+      return Array.from(values).sort();
+    };
+
+    // Calculate options for each filter type
+    options.empresa = getUniqueValues('empresa');
+    options.marca = getUniqueValues('marca');
+    options.fabrica = getUniqueValues('fabrica');
+    options.familia1 = getUniqueValues('familia1');
+    options.familia2 = getUniqueValues('familia2');
+    options.produto = getUniqueValues('produto');
+    
+    // Static options
+    options.tipo = ['ORÇAMENTO', 'REAL', 'REVISÃO', 'PO', 'SI'];
+    options.ano = ['2024', '2025', '2026'];
+
+    return options;
+  }, [filteredProducts]);
 
   const handleCheckboxChange = (filterType: string, value: string, checked: boolean, allValues: string[]) => {
     console.log('Checkbox changed:', { filterType, value, checked });
@@ -124,7 +134,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-0 border-blue-200 shadow-lg" align="start">
+        <PopoverContent 
+          className="w-56 p-0 border-blue-200 shadow-lg" 
+          align="start"
+          sideOffset={5}
+        >
           <div className="p-2 border-b border-blue-100">
             <div className="flex items-center space-x-2">
               <Checkbox 
@@ -147,8 +161,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               </label>
             </div>
           </div>
-          <ScrollArea className="h-[200px] p-2">
-            <div className="space-y-2">
+          <ScrollArea className="h-[200px] overflow-y-auto">
+            <div className="p-2 space-y-2">
               {options.map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <Checkbox 
