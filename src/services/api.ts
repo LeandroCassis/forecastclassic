@@ -1,46 +1,45 @@
-import sql from 'mssql';
+import { toast } from "@/components/ui/use-toast";
 
-const config = {
-  server: 'vesperttine-server.database.windows.net',
-  database: 'VESPERTTINE',
-  user: 'vesperttine',
-  password: '840722aA',
-  options: {
-    encrypt: true,
-    trustServerCertificate: false
-  }
-};
+const API_BASE_URL = 'https://vesperttine-server.database.windows.net/api';
 
-let pool: sql.ConnectionPool | null = null;
-
-async function getConnection() {
-  try {
-    if (!pool) {
-      pool = await new sql.ConnectionPool(config).connect();
-      console.log('Connected to Azure SQL Database');
-    }
-    return pool;
-  } catch (err) {
-    console.error('Error connecting to Azure SQL:', err);
-    throw err;
-  }
+interface QueryResponse<T> {
+  data: T[];
+  error: string | null;
 }
 
-export async function executeQuery(queryString: string, params?: any[]) {
+export async function query<T>(queryString: string, params?: any[]): Promise<QueryResponse<T>> {
   try {
-    const pool = await getConnection();
-    const request = pool.request();
+    const response = await fetch(`${API_BASE_URL}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        query: queryString, 
+        params,
+        config: {
+          server: 'vesperttine-server.database.windows.net',
+          database: 'VESPERTTINE',
+          user: 'vesperttine',
+          password: '840722aA',
+        }
+      }),
+    });
 
-    if (params) {
-      params.forEach((param, index) => {
-        request.input(`param${index}`, param);
-      });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const result = await request.query(queryString);
-    return result.recordset;
+    const data = await response.json();
+    console.log('API response:', data);
+    return { data, error: null };
   } catch (error) {
-    console.error('Error executing query:', error);
-    throw error;
+    console.error('API query error:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to fetch data. Please try again later.",
+    });
+    return { data: [], error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
