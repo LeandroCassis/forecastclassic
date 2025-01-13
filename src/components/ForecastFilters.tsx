@@ -15,13 +15,13 @@ interface ForecastFiltersProps {
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
   // State for each filter
-  const [selectedCodigo, setSelectedCodigo] = useState<string>('');
-  const [selectedEmpresa, setSelectedEmpresa] = useState<string>('');
-  const [selectedProduto, setSelectedProduto] = useState<string>('');
-  const [selectedMarca, setSelectedMarca] = useState<string>('');
-  const [selectedFabrica, setSelectedFabrica] = useState<string>('');
-  const [selectedFamilia1, setSelectedFamilia1] = useState<string>('');
-  const [selectedFamilia2, setSelectedFamilia2] = useState<string>('');
+  const [selectedCodigo, setSelectedCodigo] = useState<string>('all');
+  const [selectedEmpresa, setSelectedEmpresa] = useState<string>('all');
+  const [selectedProduto, setSelectedProduto] = useState<string>('all');
+  const [selectedMarca, setSelectedMarca] = useState<string>('all');
+  const [selectedFabrica, setSelectedFabrica] = useState<string>('all');
+  const [selectedFamilia1, setSelectedFamilia1] = useState<string>('all');
+  const [selectedFamilia2, setSelectedFamilia2] = useState<string>('all');
 
   // Fetch all products once with caching
   const { data: allProducts, isLoading } = useQuery({
@@ -55,25 +55,25 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     let filteredProducts = allProducts;
 
     // Apply cascading filters
-    if (selectedCodigo) {
+    if (selectedCodigo !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.codigo === selectedCodigo);
     }
-    if (selectedEmpresa) {
+    if (selectedEmpresa !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.empresa === selectedEmpresa);
     }
-    if (selectedProduto) {
+    if (selectedProduto !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.produto === selectedProduto);
     }
-    if (selectedMarca) {
+    if (selectedMarca !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.marca === selectedMarca);
     }
-    if (selectedFabrica) {
+    if (selectedFabrica !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.fabrica === selectedFabrica);
     }
-    if (selectedFamilia1) {
+    if (selectedFamilia1 !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.familia1 === selectedFamilia1);
     }
-    if (selectedFamilia2) {
+    if (selectedFamilia2 !== 'all') {
       filteredProducts = filteredProducts.filter(p => p.familia2 === selectedFamilia2);
     }
 
@@ -94,42 +94,42 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     switch (filterType) {
       case 'codigo':
         setSelectedCodigo(value);
-        setSelectedEmpresa('');
-        setSelectedProduto('');
-        setSelectedMarca('');
-        setSelectedFabrica('');
-        setSelectedFamilia1('');
-        setSelectedFamilia2('');
+        setSelectedEmpresa('all');
+        setSelectedProduto('all');
+        setSelectedMarca('all');
+        setSelectedFabrica('all');
+        setSelectedFamilia1('all');
+        setSelectedFamilia2('all');
         break;
       case 'empresa':
         setSelectedEmpresa(value);
-        setSelectedProduto('');
-        setSelectedMarca('');
-        setSelectedFabrica('');
-        setSelectedFamilia1('');
-        setSelectedFamilia2('');
+        setSelectedProduto('all');
+        setSelectedMarca('all');
+        setSelectedFabrica('all');
+        setSelectedFamilia1('all');
+        setSelectedFamilia2('all');
         break;
       case 'produto':
         setSelectedProduto(value);
-        setSelectedMarca('');
-        setSelectedFabrica('');
-        setSelectedFamilia1('');
-        setSelectedFamilia2('');
+        setSelectedMarca('all');
+        setSelectedFabrica('all');
+        setSelectedFamilia1('all');
+        setSelectedFamilia2('all');
         break;
       case 'marca':
         setSelectedMarca(value);
-        setSelectedFabrica('');
-        setSelectedFamilia1('');
-        setSelectedFamilia2('');
+        setSelectedFabrica('all');
+        setSelectedFamilia1('all');
+        setSelectedFamilia2('all');
         break;
       case 'fabrica':
         setSelectedFabrica(value);
-        setSelectedFamilia1('');
-        setSelectedFamilia2('');
+        setSelectedFamilia1('all');
+        setSelectedFamilia2('all');
         break;
       case 'familia1':
         setSelectedFamilia1(value);
-        setSelectedFamilia2('');
+        setSelectedFamilia2('all');
         break;
       case 'familia2':
         setSelectedFamilia2(value);
@@ -137,7 +137,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
 
     // Notify parent component of filter changes
-    onFilterChange(filterType, value ? [value] : []);
+    onFilterChange(filterType, value === 'all' ? [] : [value]);
   };
 
   if (isLoading) {
@@ -164,7 +164,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Código" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="all">Todos</SelectItem>
           {filterOptions.codigos.map((codigo) => (
             <SelectItem key={codigo} value={codigo}>
               {codigo}
@@ -181,7 +181,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Empresa" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {filterOptions.empresas.map((empresa) => (
             <SelectItem key={empresa} value={empresa}>
               {empresa}
@@ -198,7 +198,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Produto" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="all">Todos</SelectItem>
           {filterOptions.produtos.map((produto) => (
             <SelectItem key={produto} value={produto}>
               {produto}
@@ -215,7 +215,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Marca" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {filterOptions.marcas.map((marca) => (
             <SelectItem key={marca} value={marca}>
               {marca}
@@ -232,7 +232,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Fábrica" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {filterOptions.fabricas.map((fabrica) => (
             <SelectItem key={fabrica} value={fabrica}>
               {fabrica}
@@ -249,7 +249,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Família 1" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {filterOptions.familias1.map((familia1) => (
             <SelectItem key={familia1} value={familia1}>
               {familia1}
@@ -266,7 +266,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           <SelectValue placeholder="Família 2" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas</SelectItem>
+          <SelectItem value="all">Todas</SelectItem>
           {filterOptions.familias2.map((familia2) => (
             <SelectItem key={familia2} value={familia2}>
               {familia2}
