@@ -25,8 +25,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [selectedCode, setSelectedCode] = useState<string[]>([]);
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
   const [selectedFamily2, setSelectedFamily2] = useState<string[]>([]);
-  const [isYearOpen, setIsYearOpen] = useState(false);
-  const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
     year: '',
     type: '',
@@ -34,6 +32,15 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     codigo: '',
     familia1: '',
     familia2: '',
+  });
+
+  const [dropdownStates, setDropdownStates] = useState({
+    year: false,
+    type: false,
+    fabrica: false,
+    codigo: false,
+    familia1: false,
+    familia2: false
   });
 
   const { data: filterOptions } = useQuery({
@@ -132,19 +139,24 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     );
   };
 
+  const toggleDropdown = (key: string) => {
+    setDropdownStates(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const renderFilterDropdown = (
     label: string,
     options: string[],
     selected: string[],
     onSelect: (value: string) => void,
-    isOpen: boolean,
-    setIsOpen: (open: boolean) => void,
     filterKey: string
   ) => (
     <div className="relative">
       <Button
         variant="outline"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => toggleDropdown(filterKey)}
         className="w-[180px] justify-between"
       >
         {label}
@@ -154,7 +166,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             : ''}
         </span>
       </Button>
-      {isOpen && (
+      {dropdownStates[filterKey as keyof typeof dropdownStates] && (
         <div className="absolute z-50 w-[250px] mt-2 bg-white border rounded-md shadow-lg">
           <div className="p-2">
             <div className="flex items-center space-x-2 mb-2">
@@ -195,8 +207,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           ['Todos', '2024', '2025', '2026'],
           selectedYear,
           (value) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', ['Todos', '2024', '2025', '2026']),
-          isYearOpen,
-          setIsYearOpen,
           'year'
         )}
 
@@ -205,161 +215,72 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
           selectedType,
           (value) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO']),
-          isTypeOpen,
-          setIsTypeOpen,
           'type'
         )}
 
-        <div className="space-y-2">
-          <Select
-            value={selectedFactory[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [])}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Fábrica" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredOptions?.fabrica.map((fabrica) => (
-                <SelectItem key={fabrica} value={fabrica}>
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedFactory.includes(fabrica)}
-                      className="mr-2"
-                    />
-                    {fabrica}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap">
-            {selectedFactory.map((value) => (
-              <Badge key={value} variant="secondary" className="mr-1 mb-1">
-                {value}
-                <Button
-                  variant="ghost"
-                  className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || [])}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+        {renderFilterDropdown(
+          'Fábrica',
+          filteredOptions?.fabrica || [],
+          selectedFactory,
+          (value) => handleMultiSelect(value, selectedFactory, setSelectedFactory, 'fabrica', filteredOptions?.fabrica || []),
+          'fabrica'
+        )}
 
-        <div className="space-y-2">
-          <Select
-            value={selectedCode[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [])}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Cód Produto" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredOptions?.codigo.map((codigo) => (
-                <SelectItem key={codigo} value={codigo}>
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedCode.includes(codigo)}
-                      className="mr-2"
-                    />
-                    {codigo}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap">
-            {selectedCode.map((value) => (
-              <Badge key={value} variant="secondary" className="mr-1 mb-1">
-                {value}
-                <Button
-                  variant="ghost"
-                  className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || [])}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+        {renderFilterDropdown(
+          'Cód Produto',
+          filteredOptions?.codigo || [],
+          selectedCode,
+          (value) => handleMultiSelect(value, selectedCode, setSelectedCode, 'codigo', filteredOptions?.codigo || []),
+          'codigo'
+        )}
 
-        <div className="space-y-2">
-          <Select
-            value={selectedFamily1[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [])}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Família 1" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredOptions?.familia1.map((familia) => (
-                <SelectItem key={familia} value={familia}>
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedFamily1.includes(familia)}
-                      className="mr-2"
-                    />
-                    {familia}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap">
-            {selectedFamily1.map((value) => (
-              <Badge key={value} variant="secondary" className="mr-1 mb-1">
-                {value}
-                <Button
-                  variant="ghost"
-                  className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || [])}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-        </div>
+        {renderFilterDropdown(
+          'Família 1',
+          filteredOptions?.familia1 || [],
+          selectedFamily1,
+          (value) => handleMultiSelect(value, selectedFamily1, setSelectedFamily1, 'familia1', filteredOptions?.familia1 || []),
+          'familia1'
+        )}
 
-        <div className="space-y-2">
-          <Select
-            value={selectedFamily2[0] || ''}
-            onValueChange={(value) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [])}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Família 2" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredOptions?.familia2.map((familia) => (
-                <SelectItem key={familia} value={familia}>
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedFamily2.includes(familia)}
-                      className="mr-2"
-                    />
-                    {familia}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap">
-            {selectedFamily2.map((value) => (
-              <Badge key={value} variant="secondary" className="mr-1 mb-1">
-                {value}
-                <Button
-                  variant="ghost"
-                  className="h-4 w-4 p-0 ml-2"
-                  onClick={() => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || [])}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
+        {renderFilterDropdown(
+          'Família 2',
+          filteredOptions?.familia2 || [],
+          selectedFamily2,
+          (value) => handleMultiSelect(value, selectedFamily2, setSelectedFamily2, 'familia2', filteredOptions?.familia2 || []),
+          'familia2'
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {[
+            ...selectedYear.map(v => ({ value: v, type: 'ano', setter: setSelectedYear })),
+            ...selectedType.map(v => ({ value: v, type: 'tipo', setter: setSelectedType })),
+            ...selectedFactory.map(v => ({ value: v, type: 'fabrica', setter: setSelectedFactory })),
+            ...selectedCode.map(v => ({ value: v, type: 'codigo', setter: setSelectedCode })),
+            ...selectedFamily1.map(v => ({ value: v, type: 'familia1', setter: setSelectedFamily1 })),
+            ...selectedFamily2.map(v => ({ value: v, type: 'familia2', setter: setSelectedFamily2 }))
+          ].map(({ value, type, setter }) => (
+            <Badge key={`${type}-${value}`} variant="secondary">
+              {value}
+              <Button
+                variant="ghost"
+                className="h-4 w-4 p-0 ml-2"
+                onClick={() => handleMultiSelect(
+                  value,
+                  type === 'ano' ? selectedYear :
+                  type === 'tipo' ? selectedType :
+                  type === 'fabrica' ? selectedFactory :
+                  type === 'codigo' ? selectedCode :
+                  type === 'familia1' ? selectedFamily1 :
+                  selectedFamily2,
+                  setter,
+                  type,
+                  filteredOptions?.[type as keyof typeof filteredOptions] || []
+                )}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          ))}
         </div>
       </div>
     </div>
