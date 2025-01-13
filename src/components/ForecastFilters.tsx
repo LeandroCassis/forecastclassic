@@ -30,8 +30,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       console.log('Fetching filter options');
       const { data, error } = await supabase
         .from('produtos')
-        .select('codigo, fabrica, familia1, familia2')
-        .order('codigo');
+        .select('codigo, fabrica, familia1, familia2');
 
       if (error) {
         console.error('Error fetching filter options:', error);
@@ -50,9 +49,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
   });
 
-  useEffect(() => {
-    // Apply cascading filters
-    const applyFilters = async () => {
+  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
+    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
+    queryFn: async () => {
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0 && !selectedFactory.includes('Todos')) {
@@ -68,16 +67,25 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         query = query.in('familia2', selectedFamily2);
       }
 
-      const { data } = await query;
-      
-      // Update available options based on current selection
-      if (data) {
-        const filteredProducts = data.map(p => p.produto);
-        onFilterChange('produtos', filteredProducts);
-      }
-    };
+      const { data, error } = await query;
 
-    applyFilters();
+      if (error) {
+        console.error('Error fetching filtered options:', error);
+        throw error;
+      }
+
+      return {
+        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
+        fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
+        familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
+        familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
+      };
+    },
+    enabled: !!filterOptions
+  });
+
+  useEffect(() => {
+    refetchFilteredOptions();
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
   const handleYearChange = (value: string) => {
@@ -101,43 +109,51 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   };
 
   const handleFactoryChange = (value: string) => {
-    const newValues = value === 'Todos'
-      ? []
-      : selectedFactory.includes(value)
+    if (value === 'Todos') {
+      setSelectedFactory([]);
+    } else {
+      const newValues = selectedFactory.includes(value)
         ? selectedFactory.filter(v => v !== value)
         : [...selectedFactory, value];
-    setSelectedFactory(newValues);
-    onFilterChange('fabrica', newValues);
+      setSelectedFactory(newValues);
+    }
+    onFilterChange('fabrica', selectedFactory);
   };
 
   const handleCodeChange = (value: string) => {
-    const newValues = value === 'Todos'
-      ? []
-      : selectedCode.includes(value)
+    if (value === 'Todos') {
+      setSelectedCode([]);
+    } else {
+      const newValues = selectedCode.includes(value)
         ? selectedCode.filter(v => v !== value)
         : [...selectedCode, value];
-    setSelectedCode(newValues);
-    onFilterChange('codigo', newValues);
+      setSelectedCode(newValues);
+    }
+    onFilterChange('codigo', selectedCode);
   };
 
   const handleFamily1Change = (value: string) => {
-    const newValues = value === 'Todos'
-      ? []
-      : selectedFamily1.includes(value)
+    if (value === 'Todos') {
+      setSelectedFamily1([]);
+    } else {
+      const newValues = selectedFamily1.includes(value)
         ? selectedFamily1.filter(v => v !== value)
         : [...selectedFamily1, value];
-    setSelectedFamily1(newValues);
-    onFilterChange('familia1', newValues);
+      setSelectedFamily1(newValues);
+    }
+    onFilterChange('familia1', selectedFamily1);
   };
 
   const handleFamily2Change = (value: string) => {
-    const newValues = value === 'Todos'
-      ? []
-      : selectedFamily2.includes(value)
+    if (value === 'Todos') {
+      setSelectedFamily2([]);
+    } else {
+      const newValues = selectedFamily2.includes(value)
         ? selectedFamily2.filter(v => v !== value)
         : [...selectedFamily2, value];
-    setSelectedFamily2(newValues);
-    onFilterChange('familia2', newValues);
+      setSelectedFamily2(newValues);
+    }
+    onFilterChange('familia2', selectedFamily2);
   };
 
   const renderSelectedBadges = (
@@ -160,6 +176,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         </Button>
       </Badge>
     ));
+  };
+
+  const getAvailableOptions = (type: 'codigo' | 'fabrica' | 'familia1' | 'familia2') => {
+    return filteredOptions?.[type] || filterOptions?.[type] || [];
   };
 
   return (
@@ -204,7 +224,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <SelectValue placeholder="Fábrica" />
             </SelectTrigger>
             <SelectContent>
-              {filterOptions?.fabrica.map((fabrica) => (
+              {getAvailableOptions('fabrica').map((fabrica) => (
                 <SelectItem key={fabrica} value={fabrica}>{fabrica}</SelectItem>
               ))}
             </SelectContent>
@@ -220,7 +240,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <SelectValue placeholder="Cód Produto" />
             </SelectTrigger>
             <SelectContent>
-              {filterOptions?.codigo.map((codigo) => (
+              {getAvailableOptions('codigo').map((codigo) => (
                 <SelectItem key={codigo} value={codigo}>{codigo}</SelectItem>
               ))}
             </SelectContent>
@@ -236,7 +256,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <SelectValue placeholder="Família 1" />
             </SelectTrigger>
             <SelectContent>
-              {filterOptions?.familia1.map((familia) => (
+              {getAvailableOptions('familia1').map((familia) => (
                 <SelectItem key={familia} value={familia}>{familia}</SelectItem>
               ))}
             </SelectContent>
@@ -252,7 +272,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <SelectValue placeholder="Família 2" />
             </SelectTrigger>
             <SelectContent>
-              {filterOptions?.familia2.map((familia) => (
+              {getAvailableOptions('familia2').map((familia) => (
                 <SelectItem key={familia} value={familia}>{familia}</SelectItem>
               ))}
             </SelectContent>
