@@ -10,24 +10,50 @@ import { useQuery } from '@tanstack/react-query';
 interface Filters {
   ano: string[];
   tipo: string[];
+  fabrica: string[];
+  codigo: string[];
+  familia1: string[];
+  familia2: string[];
+  produtos: string[];
 }
 
 const Index = () => {
   const [filters, setFilters] = useState<Filters>({
     ano: [],
-    tipo: []
+    tipo: [],
+    fabrica: [],
+    codigo: [],
+    familia1: [],
+    familia2: [],
+    produtos: []
   });
 
   const [showFilters, setShowFilters] = useState(true);
 
   const { data: produtos, isLoading } = useQuery({
-    queryKey: ['produtos'],
+    queryKey: ['produtos', filters],
     queryFn: async () => {
       console.log('Fetching produtos from Supabase...');
-      const { data, error } = await supabase
+      let query = supabase
         .from('produtos')
-        .select('produto')
-        .order('produto');
+        .select('produto');
+
+      if (filters.fabrica.length > 0) {
+        query = query.in('fabrica', filters.fabrica);
+      }
+      if (filters.codigo.length > 0) {
+        query = query.in('codigo', filters.codigo);
+      }
+      if (filters.familia1.length > 0) {
+        query = query.in('familia1', filters.familia1);
+      }
+      if (filters.familia2.length > 0) {
+        query = query.in('familia2', filters.familia2);
+      }
+
+      query = query.order('produto');
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching produtos:', error);
