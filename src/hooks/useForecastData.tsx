@@ -37,7 +37,7 @@ export const useForecastData = (produto: string, filters?: FilterOptions) => {
           query = query.in('familia2', filters.familia2Filtro);
         }
 
-        const { data, error } = await query.single();
+        const { data, error } = await query.maybeSingle();
         
         if (error) {
           console.error('Error fetching product:', error);
