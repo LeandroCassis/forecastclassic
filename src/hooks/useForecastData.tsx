@@ -1,5 +1,35 @@
 import { useQuery } from '@tanstack/react-query';
-import { query } from '@/integrations/azure/client';
+import { query } from '@/services/api';
+
+export interface MonthConfiguration {
+  mes: string;
+  pct_atual: number;
+  realizado: boolean;
+}
+
+export interface Grupo {
+  ano: number;
+  id_tipo: number;
+  tipo: string;
+}
+
+interface Product {
+  id: string;
+}
+
+interface MonthConfig {
+  ano: number;
+  mes: string;
+  pct_atual: number;
+  realizado: boolean;
+}
+
+interface ForecastValue {
+  ano: number;
+  id_tipo: number;
+  mes: string;
+  valor: number;
+}
 
 export const useForecastData = (produto: string) => {
   // Product data query
@@ -8,12 +38,12 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching product data for:', produto);
       try {
-        const data = await query<{ id: string }>(
+        const { data, error } = await query<Product>(
           'SELECT id FROM produtos WHERE produto = @param0',
           [produto]
         );
         
-        if (!data.length) {
+        if (error || !data.length) {
           console.log('No product found');
           return null;
         }
@@ -33,9 +63,10 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching grupos');
       try {
-        const data = await query(
+        const { data, error } = await query<Grupo>(
           'SELECT * FROM grupos ORDER BY ano, id_tipo'
         );
+        if (error) throw new Error(error);
         console.log('Grupos fetched:', data);
         return data;
       } catch (error) {
@@ -52,9 +83,10 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       console.log('Fetching month configurations');
       try {
-        const data = await query(
+        const { data, error } = await query<MonthConfig>(
           'SELECT * FROM month_configurations ORDER BY ano, mes'
         );
+        if (error) throw new Error(error);
 
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
         data.forEach(config => {
@@ -64,7 +96,7 @@ export const useForecastData = (produto: string) => {
           configByYear[config.ano][config.mes] = {
             mes: config.mes,
             pct_atual: config.pct_atual,
-            realizado: config.realizado === 1 // Convert bit to boolean
+            realizado: config.realizado
           };
         });
         
@@ -89,10 +121,11 @@ export const useForecastData = (produto: string) => {
       
       console.log('Fetching forecast values for product ID:', productData.id);
       try {
-        const data = await query(
+        const { data, error } = await query<ForecastValue>(
           'SELECT * FROM forecast_values WHERE produto_id = @param0',
           [productData.id]
         );
+        if (error) throw new Error(error);
         
         const transformedData: { [key: string]: { [key: string]: number } } = {};
         
@@ -125,15 +158,3 @@ export const useForecastData = (produto: string) => {
     hasErrors
   };
 };
-
-export interface MonthConfiguration {
-  mes: string;
-  pct_atual: number;
-  realizado: boolean;
-}
-
-export interface Grupo {
-  ano: number;
-  id_tipo: number;
-  tipo: string;
-}

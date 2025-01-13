@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { query } from '@/integrations/azure/client';
+import { query } from '@/services/api';
 
 export const useForecastMutations = (productId: string | undefined) => {
   const queryClient = useQueryClient();
@@ -14,7 +14,7 @@ export const useForecastMutations = (productId: string | undefined) => {
     }) => {
       if (!productId) throw new Error('Product ID not found');
 
-      const result = await query(
+      const { error } = await query(
         `MERGE INTO forecast_values AS target
          USING (SELECT @param0 as produto_id, @param1 as ano, @param2 as tipo, 
                        @param3 as id_tipo, @param4 as mes, @param5 as valor) 
@@ -32,7 +32,7 @@ export const useForecastMutations = (productId: string | undefined) => {
         [productId, ano, tipo, id_tipo, mes, valor]
       );
 
-      if (!result) throw new Error('Failed to update forecast value');
+      if (error) throw new Error('Failed to update forecast value');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
