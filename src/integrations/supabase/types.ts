@@ -123,6 +123,7 @@ export type Database = {
           created_at: string | null
           data_atualizacao_fob: string | null
           empresa: string
+          estoque: number | null
           fabrica: string
           familia1: string
           familia2: string
@@ -139,6 +140,7 @@ export type Database = {
           created_at?: string | null
           data_atualizacao_fob?: string | null
           empresa: string
+          estoque?: number | null
           fabrica: string
           familia1: string
           familia2: string
@@ -155,6 +157,7 @@ export type Database = {
           created_at?: string | null
           data_atualizacao_fob?: string | null
           empresa?: string
+          estoque?: number | null
           fabrica?: string
           familia1?: string
           familia2?: string

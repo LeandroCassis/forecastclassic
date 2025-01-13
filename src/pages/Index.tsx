@@ -2,34 +2,23 @@ import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ForecastTable from '@/components/ForecastTable';
 import ForecastFilters from '@/components/ForecastFilters';
+import ProductHeader from '@/components/ProductHeader';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
 interface Filters {
-  empresa: string[];
-  marca: string[];
-  fabrica: string[];
-  familia1: string[];
-  familia2: string[];
-  produto: string[];
-  tipo: string[];
   ano: string[];
+  tipo: string[];
 }
 
 const queryClient = new QueryClient();
 
 const IndexContent = () => {
   const [filters, setFilters] = useState<Filters>({
-    empresa: [],
-    marca: [],
-    fabrica: [],
-    familia1: [],
-    familia2: [],
-    produto: [],
-    tipo: [],
-    ano: []
+    ano: [],
+    tipo: []
   });
 
   const [showFilters, setShowFilters] = useState(true);
@@ -53,7 +42,7 @@ const IndexContent = () => {
     }
   });
 
-  const handleFilterChange = (filterType: string, values: string[]) => {
+  const handleFilterChange = (filterType: keyof Filters, values: string[]) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: values
@@ -63,13 +52,6 @@ const IndexContent = () => {
 
   const toggleFilters = () => {
     setShowFilters(!showFilters);
-  };
-
-  const shouldShowProduct = (produto: string) => {
-    if (filters.produto.length > 0 && !filters.produto.includes(produto)) {
-      return false;
-    }
-    return true;
   };
 
   if (isLoading) {
@@ -120,39 +102,17 @@ const IndexContent = () => {
         {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
         
         <div className="space-y-8">
-          {filters.produto.length > 0 ? (
-            <>
-              {filters.produto.map(produto => (
-                <div 
-                  key={produto} 
-                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
-                >
-                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
-                  <ForecastTable 
-                    produto={produto} 
-                    anoFiltro={filters.ano}
-                    tipoFiltro={filters.tipo}
-                  />
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              {produtos?.map(produto => shouldShowProduct(produto) && (
-                <div 
-                  key={produto} 
-                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
-                >
-                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
-                  <ForecastTable 
-                    produto={produto} 
-                    anoFiltro={filters.ano}
-                    tipoFiltro={filters.tipo}
-                  />
-                </div>
-              ))}
-            </>
-          )}
+          {produtos?.map(produto => (
+            <div key={produto} className="space-y-0">
+              <h2 className="text-2xl font-semibold text-blue-900 mb-4">{produto}</h2>
+              <ProductHeader produto={produto} />
+              <ForecastTable 
+                produto={produto} 
+                anoFiltro={filters.ano}
+                tipoFiltro={filters.tipo}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
