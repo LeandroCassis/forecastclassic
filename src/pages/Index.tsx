@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ForecastTable from '@/components/ForecastTable';
 import ForecastFilters from '@/components/ForecastFilters';
 import ProductHeader from '@/components/ProductHeader';
@@ -13,9 +12,7 @@ interface Filters {
   tipo: string[];
 }
 
-const queryClient = new QueryClient();
-
-const IndexContent = () => {
+const Index = () => {
   const [filters, setFilters] = useState<Filters>({
     ano: [],
     tipo: []
@@ -116,14 +113,6 @@ const IndexContent = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-const Index = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <IndexContent />
-    </QueryClientProvider>
   );
 };
 
