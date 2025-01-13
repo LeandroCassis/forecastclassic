@@ -131,6 +131,7 @@ export type Database = {
           id: string
           indice: number | null
           marca: string
+          moedafob: string | null
           preco_venda: number | null
           produto: string
           updated_at: string | null
@@ -148,6 +149,7 @@ export type Database = {
           id?: string
           indice?: number | null
           marca: string
+          moedafob?: string | null
           preco_venda?: number | null
           produto: string
           updated_at?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           id?: string
           indice?: number | null
           marca?: string
+          moedafob?: string | null
           preco_venda?: number | null
           produto?: string
           updated_at?: string | null
