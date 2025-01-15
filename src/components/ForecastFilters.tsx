@@ -103,14 +103,14 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     currentSelected: string[],
     setter: (values: string[]) => void,
     type: string,
-    event?: React.MouseEvent
+    event: React.MouseEvent
   ) => {
-    event?.preventDefault();
-    event?.stopPropagation();
+    event.preventDefault();
+    event.stopPropagation();
     
     let newValues: string[];
     
-    if (event?.ctrlKey || event?.metaKey) {
+    if (event.ctrlKey || event.metaKey) {
       // Multi-select with Ctrl/Cmd key
       if (currentSelected.includes(value)) {
         newValues = currentSelected.filter(v => v !== value);
@@ -144,6 +144,22 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     );
   };
 
+  const handleClearAll = (
+    setter: (values: string[]) => void,
+    type: string
+  ) => {
+    setter([]);
+    onFilterChange(type, []);
+    // Don't close the dropdown after clearing
+  };
+
+  const toggleDropdown = (key: string) => {
+    setDropdownStates(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       Object.entries(dropdownRefs.current).forEach(([key, ref]) => {
@@ -156,21 +172,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleClearAll = (
-    setter: (values: string[]) => void,
-    type: string
-  ) => {
-    setter([]);
-    onFilterChange(type, []);
-  };
-
-  const toggleDropdown = (key: string) => {
-    setDropdownStates(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
 
   const renderFilterDropdown = (
     label: string,
@@ -216,7 +217,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               </div>
               <div className="flex mb-2">
                 <button
-                  onClick={() => handleClearAll(setter, filterKey)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearAll(setter, filterKey);
+                  }}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   Limpar Seleção
