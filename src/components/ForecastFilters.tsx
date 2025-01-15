@@ -113,16 +113,20 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     if (event.ctrlKey || event.metaKey) {
       // Multi-select with Ctrl/Cmd key
       if (currentSelected.includes(value)) {
+        // Remove if already selected
         newValues = currentSelected.filter(v => v !== value);
       } else {
+        // Add to selection
         newValues = [...currentSelected, value];
       }
     } else {
-      // Single select without Ctrl/Cmd key
-      if (currentSelected.includes(value) && currentSelected.length === 1) {
-        newValues = [];
+      // Toggle selection without Ctrl/Cmd key
+      if (currentSelected.includes(value)) {
+        // Remove if already selected
+        newValues = currentSelected.filter(v => v !== value);
       } else {
-        newValues = [value];
+        // Add if not selected
+        newValues = [...currentSelected, value];
       }
     }
     
