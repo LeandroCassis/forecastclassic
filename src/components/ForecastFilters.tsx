@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +32,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const { data: initialOptions, isLoading: isLoadingInitial } = useQuery({
+  const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
       console.log('Fetching initial filter options...');
@@ -48,11 +48,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia1: [...new Set(data.map(item => item.familia1))],
         familia2: [...new Set(data.map(item => item.familia2))]
       };
-    },
-    staleTime: Infinity
+    }
   });
 
-  const { data: filteredOptions } = useQuery({
+  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
       console.log('Fetching filtered options with selections:', {
@@ -87,8 +86,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
       };
     },
-    enabled: !!initialOptions,
-    staleTime: Infinity
+    enabled: !!initialOptions
   });
 
   useEffect(() => {
@@ -104,7 +102,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMultiSelect = useCallback((
+  const handleMultiSelect = (
     value: string,
     type: string,
     event: React.MouseEvent
@@ -136,15 +134,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         return;
     }
 
-    const newValues = currentSelected.includes(value)
-      ? currentSelected.filter(v => v !== value)
-      : [...currentSelected, value];
+    let newValues: string[];
+    if (currentSelected.includes(value)) {
+      newValues = currentSelected.filter(v => v !== value);
+    } else {
+      newValues = [...currentSelected, value];
+    }
 
     setSelected(newValues);
     onFilterChange(type, newValues);
-  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2, onFilterChange]);
+  };
 
-  const handleClearAll = useCallback((
+  const handleClearAll = (
     type: string,
     event: React.MouseEvent
   ) => {
@@ -167,16 +168,16 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
     
     onFilterChange(type, []);
-  }, [onFilterChange]);
+  };
 
-  const toggleDropdown = useCallback((key: string) => {
+  const toggleDropdown = (key: string) => {
     setDropdownStates(prev => ({
       ...prev,
       [key]: !prev[key as keyof typeof dropdownStates]
     }));
-  }, []);
+  };
 
-  const getSelectedValuesForType = useCallback((type: string): string[] => {
+  const getSelectedValuesForType = (type: string): string[] => {
     switch (type) {
       case 'fabrica':
         return selectedFactory;
@@ -189,45 +190,35 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       default:
         return [];
     }
-  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
+  };
 
-  const filterOptionsBySearch = useCallback((options: string[], searchTerm: string) => {
+  const getOptionCount = (option: string, filterKey: string) => {
+    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
+    return isAvailable ? 1 : 0;
+  };
+
+  const filterOptionsBySearch = (options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
     const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
     return options.filter(option => 
       terms.every(term => option.toLowerCase().includes(term))
     );
-  }, []);
+  };
 
-  // Move sortedOptions and buttonText memoization outside of renderFilterDropdown
-  const memoizedOptions = useMemo(() => {
-    const options = {
-      fabrica: (filteredOptions?.fabrica || initialOptions?.fabrica || []),
-      codigo: (filteredOptions?.codigo || initialOptions?.codigo || []),
-      familia1: (filteredOptions?.familia1 || initialOptions?.familia1 || []),
-      familia2: (filteredOptions?.familia2 || initialOptions?.familia2 || [])
-    };
-
-    return Object.entries(options).reduce((acc, [key, values]) => ({
-      ...acc,
-      [key]: [...values].sort((a, b) => a.localeCompare(b))
-    }), {} as Record<string, string[]>);
-  }, [filteredOptions, initialOptions]);
-
-  const getButtonText = useCallback((label: string, selected: string[]) => {
-    if (selected.length === 0) return label;
-    if (selected.length === 1) return `${label}: ${selected[0]}`;
-    return `${label} (${selected.length})`;
-  }, []);
-
-  const renderFilterDropdown = useCallback((
+  const renderFilterDropdown = (
     label: string,
+    options: string[],
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = memoizedOptions[filterKey];
+    const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
     const hasSelectedItems = selected.length > 0;
-    const buttonText = getButtonText(label, selected);
+
+    const getButtonText = () => {
+      if (selected.length === 0) return label;
+      if (selected.length === 1) return `${label}: ${selected[0]}`;
+      return `${label} (${selected.length})`;
+    };
 
     return (
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
@@ -238,12 +229,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between transition-colors duration-200 ${
-            hasSelectedItems ? 'border-green-800 bg-green-50 text-green-800 hover:bg-green-100' : ''
-          }`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
         >
           <span className="truncate">
-            {buttonText}
+            {getButtonText()}
           </span>
         </Button>
         {dropdownStates[filterKey as keyof typeof dropdownStates] && (
@@ -287,8 +276,14 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                       />
                       <span className="text-sm font-medium">
                         {option}
+                        {selected.includes(option) && (
+                          <span className="ml-1 text-green-800">✓</span>
+                        )}
                       </span>
                     </div>
+                    <span className="text-xs text-gray-500">
+                      ({getOptionCount(option, filterKey)})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -297,29 +292,34 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         )}
       </div>
     );
-  }, [
-    dropdownStates,
-    searchTerms,
-    handleMultiSelect,
-    handleClearAll,
-    toggleDropdown,
-    getSelectedValuesForType,
-    filterOptionsBySearch,
-    memoizedOptions,
-    getButtonText
-  ]);
-
-  if (isLoadingInitial) {
-    return <div>Carregando filtros...</div>;
-  }
+  };
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
-        {renderFilterDropdown('Fábrica', 'fabrica')}
-        {renderFilterDropdown('Cód Produto', 'codigo')}
-        {renderFilterDropdown('Família 1', 'familia1')}
-        {renderFilterDropdown('Família 2', 'familia2')}
+        {renderFilterDropdown(
+          'Fábrica',
+          (filteredOptions?.fabrica || initialOptions?.fabrica || []),
+          'fabrica'
+        )}
+
+        {renderFilterDropdown(
+          'Cód Produto',
+          filteredOptions?.codigo || initialOptions?.codigo || [],
+          'codigo'
+        )}
+
+        {renderFilterDropdown(
+          'Família 1',
+          filteredOptions?.familia1 || initialOptions?.familia1 || [],
+          'familia1'
+        )}
+
+        {renderFilterDropdown(
+          'Família 2',
+          filteredOptions?.familia2 || initialOptions?.familia2 || [],
+          'familia2'
+        )}
       </div>
     </div>
   );
