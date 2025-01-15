@@ -146,11 +146,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const handleClearAll = (
     setter: (values: string[]) => void,
-    type: string
+    type: string,
+    event: React.MouseEvent
   ) => {
+    event.preventDefault();
+    event.stopPropagation();
     setter([]);
     onFilterChange(type, []);
-    // Don't close the dropdown after clearing
   };
 
   const toggleDropdown = (key: string) => {
@@ -192,7 +194,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
         <Button
           variant="outline"
-          onClick={() => toggleDropdown(filterKey)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleDropdown(filterKey);
+          }}
           className="w-[180px] justify-between"
         >
           <span className="truncate">
@@ -213,14 +219,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                     [filterKey]: e.target.value
                   }))}
                   className="h-8"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
               <div className="flex mb-2">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClearAll(setter, filterKey);
-                  }}
+                  onClick={(e) => handleClearAll(setter, filterKey, e)}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   Limpar Seleção
