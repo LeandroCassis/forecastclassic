@@ -49,7 +49,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       };
     },
     staleTime: Infinity,
-    cacheTime: Infinity
+    gcTime: Infinity
   });
 
   const { data: filteredOptions } = useQuery({
@@ -82,7 +82,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     },
     enabled: !!initialOptions,
     staleTime: Infinity,
-    cacheTime: Infinity
+    gcTime: Infinity
   });
 
   useEffect(() => {
