@@ -47,6 +47,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
+      console.log('Fetching initial filter options...');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
@@ -65,6 +66,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
+      console.log('Fetching filtered options with selections:', {
+        selectedFactory,
+        selectedCode,
+        selectedFamily1,
+        selectedFamily2
+      });
+      
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0) {
@@ -258,7 +266,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-blue-500 bg-blue-50/50' : ''}`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
         >
           <span className="truncate">
             {getButtonText()}
@@ -284,7 +292,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               <div className="flex mb-2">
                 <button
                   onClick={(e) => handleClearAll(filterKey, e)}
-                  className="text-xs text-blue-600 hover:text-blue-800"
+                  className="text-xs text-green-800 hover:text-green-900"
                 >
                   Limpar Seleção
                 </button>
@@ -294,7 +302,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   <div
                     key={option}
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                      currentSelected.includes(option) ? 'bg-gray-100' : ''
+                      currentSelected.includes(option) ? 'bg-green-50' : ''
                     }`}
                     onClick={(e) => handleMultiSelect(option, currentSelected, filterKey, e)}
                   >
@@ -306,7 +314,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                       <span className="text-sm font-medium">
                         {option}
                         {currentSelected.includes(option) && (
-                          <span className="ml-1 text-blue-600">✓</span>
+                          <span className="ml-1 text-green-800">✓</span>
                         )}
                       </span>
                     </div>
