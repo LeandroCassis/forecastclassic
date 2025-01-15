@@ -148,16 +148,24 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     let newValues: string[];
     
     if (value === 'Todos') {
+      // Se "Todos" já está selecionado, limpa a seleção
+      // Caso contrário, seleciona todas as opções
       newValues = currentSelected.includes('Todos') ? [] : options;
     } else {
       if (event?.ctrlKey) {
+        // Comportamento Multi-select com CTRL
         if (currentSelected.includes(value)) {
-          newValues = currentSelected.filter(v => v !== value);
+          newValues = currentSelected.filter(v => v !== value && v !== 'Todos');
         } else {
-          newValues = [...currentSelected, value];
+          newValues = [...currentSelected.filter(v => v !== 'Todos'), value];
         }
       } else {
-        newValues = [value];
+        // Comportamento normal - mantém seleção anterior se clicar em item já selecionado
+        if (currentSelected.length === 1 && currentSelected[0] === value) {
+          newValues = currentSelected;
+        } else {
+          newValues = [value];
+        }
       }
     }
     
@@ -240,6 +248,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       return a.localeCompare(b);
     });
 
+    // Calcula o texto do botão baseado na seleção atual
+    const getButtonText = () => {
+      if (selected.length === 0) return label;
+      if (selected.length === 1) return `${label}: ${selected[0]}`;
+      return `${label} (${selected.length})`;
+    };
+
     return (
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
         <Button
@@ -247,9 +262,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           onClick={() => toggleDropdown(filterKey)}
           className="w-[180px] justify-between"
         >
-          {label}
-          <span className="ml-2">
-            {selected.length > 0 ? `(${selected.length})` : ''}
+          <span className="truncate">
+            {getButtonText()}
           </span>
         </Button>
         {dropdownStates[filterKey as keyof typeof dropdownStates] && (
@@ -287,7 +301,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   <div
                     key={option}
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                      selected.includes(option) ? 'bg-gray-50' : ''
+                      selected.includes(option) ? 'bg-gray-100' : ''
                     }`}
                     onClick={(e) => onSelect(option, e)}
                   >
@@ -296,7 +310,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                         checked={selected.includes(option)}
                         className="pointer-events-none"
                       />
-                      <span className="text-sm">{option}</span>
+                      <span className="text-sm font-medium">
+                        {option}
+                        {selected.includes(option) && (
+                          <span className="ml-1 text-blue-600">✓</span>
+                        )}
+                      </span>
                     </div>
                     <span className="text-xs text-gray-500">
                       ({getOptionCount(option, filterKey)})
