@@ -199,23 +199,35 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     );
   }, []);
 
+  // Move sortedOptions and buttonText memoization outside of renderFilterDropdown
+  const memoizedOptions = useMemo(() => {
+    const options = {
+      fabrica: (filteredOptions?.fabrica || initialOptions?.fabrica || []),
+      codigo: (filteredOptions?.codigo || initialOptions?.codigo || []),
+      familia1: (filteredOptions?.familia1 || initialOptions?.familia1 || []),
+      familia2: (filteredOptions?.familia2 || initialOptions?.familia2 || [])
+    };
+
+    return Object.entries(options).reduce((acc, [key, values]) => ({
+      ...acc,
+      [key]: [...values].sort((a, b) => a.localeCompare(b))
+    }), {} as Record<string, string[]>);
+  }, [filteredOptions, initialOptions]);
+
+  const getButtonText = useCallback((label: string, selected: string[]) => {
+    if (selected.length === 0) return label;
+    if (selected.length === 1) return `${label}: ${selected[0]}`;
+    return `${label} (${selected.length})`;
+  }, []);
+
   const renderFilterDropdown = useCallback((
     label: string,
-    options: string[],
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = useMemo(() => 
-      [...(options || [])].sort((a, b) => a.localeCompare(b)), 
-      [options]
-    );
+    const sortedOptions = memoizedOptions[filterKey];
     const hasSelectedItems = selected.length > 0;
-
-    const buttonText = useMemo(() => {
-      if (selected.length === 0) return label;
-      if (selected.length === 1) return `${label}: ${selected[0]}`;
-      return `${label} (${selected.length})`;
-    }, [label, selected]);
+    const buttonText = getButtonText(label, selected);
 
     return (
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
@@ -285,7 +297,17 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         )}
       </div>
     );
-  }, [dropdownStates, searchTerms, handleMultiSelect, handleClearAll, toggleDropdown, getSelectedValuesForType, filterOptionsBySearch]);
+  }, [
+    dropdownStates,
+    searchTerms,
+    handleMultiSelect,
+    handleClearAll,
+    toggleDropdown,
+    getSelectedValuesForType,
+    filterOptionsBySearch,
+    memoizedOptions,
+    getButtonText
+  ]);
 
   if (isLoadingInitial) {
     return <div>Carregando filtros...</div>;
@@ -294,26 +316,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
-        {renderFilterDropdown(
-          'Fábrica',
-          (filteredOptions?.fabrica || initialOptions?.fabrica || []),
-          'fabrica'
-        )}
-        {renderFilterDropdown(
-          'Cód Produto',
-          (filteredOptions?.codigo || initialOptions?.codigo || []),
-          'codigo'
-        )}
-        {renderFilterDropdown(
-          'Família 1',
-          (filteredOptions?.familia1 || initialOptions?.familia1 || []),
-          'familia1'
-        )}
-        {renderFilterDropdown(
-          'Família 2',
-          (filteredOptions?.familia2 || initialOptions?.familia2 || []),
-          'familia2'
-        )}
+        {renderFilterDropdown('Fábrica', 'fabrica')}
+        {renderFilterDropdown('Cód Produto', 'codigo')}
+        {renderFilterDropdown('Família 1', 'familia1')}
+        {renderFilterDropdown('Família 2', 'familia2')}
       </div>
     </div>
   );
