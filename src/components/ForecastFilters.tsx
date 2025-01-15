@@ -57,49 +57,72 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
     gcTime: Infinity
   });
 
-  // Filtered options query with memoized dependencies
-  const { data: filteredOptions } = useQuery({
-    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
-    queryFn: async () => {
-      console.log('Fetching filtered options with selections:', {
-        selectedFactory,
-        selectedCode,
-        selectedFamily1,
-        selectedFamily2
-      });
+  // Memoize the filtered options to prevent unnecessary re-renders
+  const filteredOptions = useMemo(() => {
+    if (!initialOptions) return null;
 
-      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
+    const applyFilters = (options: typeof initialOptions) => {
+      let result = { ...options };
 
       if (selectedFactory.length > 0) {
-        query = query.in('fabrica', selectedFactory);
+        result = {
+          ...result,
+          codigo: result.codigo.filter(code => 
+            initialOptions.codigo.some(c => selectedFactory.includes(c))),
+          familia1: result.familia1.filter(f1 => 
+            initialOptions.familia1.some(f => selectedFactory.includes(f))),
+          familia2: result.familia2.filter(f2 => 
+            initialOptions.familia2.some(f => selectedFactory.includes(f)))
+        };
       }
+
       if (selectedCode.length > 0) {
-        query = query.in('codigo', selectedCode);
+        result = {
+          ...result,
+          fabrica: result.fabrica.filter(fab => 
+            initialOptions.fabrica.some(f => selectedCode.includes(f))),
+          familia1: result.familia1.filter(f1 => 
+            initialOptions.familia1.some(f => selectedCode.includes(f))),
+          familia2: result.familia2.filter(f2 => 
+            initialOptions.familia2.some(f => selectedCode.includes(f)))
+        };
       }
+
       if (selectedFamily1.length > 0) {
-        query = query.in('familia1', selectedFamily1);
+        result = {
+          ...result,
+          fabrica: result.fabrica.filter(fab => 
+            initialOptions.fabrica.some(f => selectedFamily1.includes(f))),
+          codigo: result.codigo.filter(code => 
+            initialOptions.codigo.some(c => selectedFamily1.includes(c))),
+          familia2: result.familia2.filter(f2 => 
+            initialOptions.familia2.some(f => selectedFamily1.includes(f)))
+        };
       }
+
       if (selectedFamily2.length > 0) {
-        query = query.in('familia2', selectedFamily2);
+        result = {
+          ...result,
+          fabrica: result.fabrica.filter(fab => 
+            initialOptions.fabrica.some(f => selectedFamily2.includes(f))),
+          codigo: result.codigo.filter(code => 
+            initialOptions.codigo.some(c => selectedFamily2.includes(c))),
+          familia1: result.familia1.filter(f1 => 
+            initialOptions.familia1.some(f => selectedFamily2.includes(f)))
+        };
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      // Ensure selected values are always included in options
+      result.fabrica = Array.from(new Set([...result.fabrica, ...selectedFactory]));
+      result.codigo = Array.from(new Set([...result.codigo, ...selectedCode]));
+      result.familia1 = Array.from(new Set([...result.familia1, ...selectedFamily1]));
+      result.familia2 = Array.from(new Set([...result.familia2, ...selectedFamily2]));
 
-      const filteredData = {
-        fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])),
-        codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])),
-        familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])),
-        familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
-      };
+      return result;
+    };
 
-      console.log('Filtered options fetched:', filteredData);
-      return filteredData;
-    },
-    enabled: !!initialOptions,
-    staleTime: Infinity,
-    gcTime: Infinity
-  });
+    return applyFilters(initialOptions);
+  }, [initialOptions, selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
