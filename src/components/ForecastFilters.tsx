@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,7 +10,7 @@ interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
-const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterChange }) => {
+const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
   const [selectedFactory, setSelectedFactory] = useState<string[]>([]);
   const [selectedCode, setSelectedCode] = useState<string[]>([]);
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
@@ -32,7 +32,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // Initial options query with infinite stale time to prevent re-fetches
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
@@ -43,86 +42,52 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
 
       if (error) throw error;
 
-      const uniqueOptions = {
+      return {
         codigo: [...new Set(data.map(item => item.codigo))],
         fabrica: [...new Set(data.map(item => item.fabrica))],
         familia1: [...new Set(data.map(item => item.familia1))],
         familia2: [...new Set(data.map(item => item.familia2))]
       };
-      
-      console.log('Initial filter options fetched:', uniqueOptions);
-      return uniqueOptions;
-    },
-    staleTime: Infinity,
-    gcTime: Infinity
+    }
   });
 
-  // Memoize the filtered options to prevent unnecessary re-renders
-  const filteredOptions = useMemo(() => {
-    if (!initialOptions) return null;
-
-    const applyFilters = (options: typeof initialOptions) => {
-      let result = { ...options };
+  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
+    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
+    queryFn: async () => {
+      console.log('Fetching filtered options with selections:', {
+        selectedFactory,
+        selectedCode,
+        selectedFamily1,
+        selectedFamily2
+      });
+      
+      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0) {
-        result = {
-          ...result,
-          codigo: result.codigo.filter(code => 
-            initialOptions.codigo.some(c => selectedFactory.includes(c))),
-          familia1: result.familia1.filter(f1 => 
-            initialOptions.familia1.some(f => selectedFactory.includes(f))),
-          familia2: result.familia2.filter(f2 => 
-            initialOptions.familia2.some(f => selectedFactory.includes(f)))
-        };
+        query = query.in('fabrica', selectedFactory);
       }
-
       if (selectedCode.length > 0) {
-        result = {
-          ...result,
-          fabrica: result.fabrica.filter(fab => 
-            initialOptions.fabrica.some(f => selectedCode.includes(f))),
-          familia1: result.familia1.filter(f1 => 
-            initialOptions.familia1.some(f => selectedCode.includes(f))),
-          familia2: result.familia2.filter(f2 => 
-            initialOptions.familia2.some(f => selectedCode.includes(f)))
-        };
+        query = query.in('codigo', selectedCode);
       }
-
       if (selectedFamily1.length > 0) {
-        result = {
-          ...result,
-          fabrica: result.fabrica.filter(fab => 
-            initialOptions.fabrica.some(f => selectedFamily1.includes(f))),
-          codigo: result.codigo.filter(code => 
-            initialOptions.codigo.some(c => selectedFamily1.includes(c))),
-          familia2: result.familia2.filter(f2 => 
-            initialOptions.familia2.some(f => selectedFamily1.includes(f)))
-        };
+        query = query.in('familia1', selectedFamily1);
       }
-
       if (selectedFamily2.length > 0) {
-        result = {
-          ...result,
-          fabrica: result.fabrica.filter(fab => 
-            initialOptions.fabrica.some(f => selectedFamily2.includes(f))),
-          codigo: result.codigo.filter(code => 
-            initialOptions.codigo.some(c => selectedFamily2.includes(c))),
-          familia1: result.familia1.filter(f1 => 
-            initialOptions.familia1.some(f => selectedFamily2.includes(f)))
-        };
+        query = query.in('familia2', selectedFamily2);
       }
 
-      // Ensure selected values are always included in options
-      result.fabrica = Array.from(new Set([...result.fabrica, ...selectedFactory]));
-      result.codigo = Array.from(new Set([...result.codigo, ...selectedCode]));
-      result.familia1 = Array.from(new Set([...result.familia1, ...selectedFamily1]));
-      result.familia2 = Array.from(new Set([...result.familia2, ...selectedFamily2]));
+      const { data, error } = await query;
+      if (error) throw error;
 
-      return result;
-    };
-
-    return applyFilters(initialOptions);
-  }, [initialOptions, selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
+      return {
+        fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])),
+        codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])),
+        familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])),
+        familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
+      };
+    },
+    enabled: !!initialOptions
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -137,91 +102,82 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMultiSelect = useCallback((
+  const handleMultiSelect = (
     value: string,
     type: string,
     event: React.MouseEvent
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log('Handling multi-select:', { value, type });
 
-    const updateSelection = (currentSelected: string[]) => {
-      const newValues = currentSelected.includes(value)
-        ? currentSelected.filter(v => v !== value)
-        : [...currentSelected, value];
-      console.log('Updated selection:', newValues);
-      return newValues;
-    };
+    let currentSelected: string[];
+    let setSelected: React.Dispatch<React.SetStateAction<string[]>>;
 
     switch (type) {
       case 'fabrica':
-        setSelectedFactory(prev => {
-          const newValues = updateSelection(prev);
-          onFilterChange(type, newValues);
-          return newValues;
-        });
+        currentSelected = selectedFactory;
+        setSelected = setSelectedFactory;
         break;
       case 'codigo':
-        setSelectedCode(prev => {
-          const newValues = updateSelection(prev);
-          onFilterChange(type, newValues);
-          return newValues;
-        });
+        currentSelected = selectedCode;
+        setSelected = setSelectedCode;
         break;
       case 'familia1':
-        setSelectedFamily1(prev => {
-          const newValues = updateSelection(prev);
-          onFilterChange(type, newValues);
-          return newValues;
-        });
+        currentSelected = selectedFamily1;
+        setSelected = setSelectedFamily1;
         break;
       case 'familia2':
-        setSelectedFamily2(prev => {
-          const newValues = updateSelection(prev);
-          onFilterChange(type, newValues);
-          return newValues;
-        });
+        currentSelected = selectedFamily2;
+        setSelected = setSelectedFamily2;
         break;
+      default:
+        return;
     }
-  }, [onFilterChange]);
 
-  const handleClearAll = useCallback((
+    let newValues: string[];
+    if (currentSelected.includes(value)) {
+      newValues = currentSelected.filter(v => v !== value);
+    } else {
+      newValues = [...currentSelected, value];
+    }
+
+    setSelected(newValues);
+    onFilterChange(type, newValues);
+  };
+
+  const handleClearAll = (
     type: string,
     event: React.MouseEvent
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log('Clearing all selections for type:', type);
     
     switch (type) {
       case 'fabrica':
         setSelectedFactory([]);
-        onFilterChange(type, []);
         break;
       case 'codigo':
         setSelectedCode([]);
-        onFilterChange(type, []);
         break;
       case 'familia1':
         setSelectedFamily1([]);
-        onFilterChange(type, []);
         break;
       case 'familia2':
         setSelectedFamily2([]);
-        onFilterChange(type, []);
         break;
     }
-  }, [onFilterChange]);
+    
+    onFilterChange(type, []);
+  };
 
-  const toggleDropdown = useCallback((key: string) => {
+  const toggleDropdown = (key: string) => {
     setDropdownStates(prev => ({
       ...prev,
       [key]: !prev[key as keyof typeof dropdownStates]
     }));
-  }, []);
+  };
 
-  const getSelectedValuesForType = useCallback((type: string): string[] => {
+  const getSelectedValuesForType = (type: string): string[] => {
     switch (type) {
       case 'fabrica':
         return selectedFactory;
@@ -234,30 +190,35 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
       default:
         return [];
     }
-  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
+  };
 
-  const getButtonText = useCallback((label: string, selected: string[]) => {
-    if (selected.length === 0) return label;
-    if (selected.length === 1) return `${label}: ${selected[0]}`;
-    return `${label} (${selected.length})`;
-  }, []);
+  const getOptionCount = (option: string, filterKey: string) => {
+    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
+    return isAvailable ? 1 : 0;
+  };
 
-  const filterOptionsBySearch = useCallback((options: string[], searchTerm: string) => {
+  const filterOptionsBySearch = (options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
     const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
     return options.filter(option => 
       terms.every(term => option.toLowerCase().includes(term))
     );
-  }, []);
+  };
 
-  const renderFilterDropdown = useCallback((
+  const renderFilterDropdown = (
     label: string,
     options: string[],
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = useMemo(() => [...options].sort((a, b) => a.localeCompare(b)), [options]);
+    const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
     const hasSelectedItems = selected.length > 0;
+
+    const getButtonText = () => {
+      if (selected.length === 0) return label;
+      if (selected.length === 1) return `${label}: ${selected[0]}`;
+      return `${label} (${selected.length})`;
+    };
 
     return (
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
@@ -268,10 +229,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50 hover:bg-green-100/50' : ''}`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
         >
           <span className="truncate">
-            {getButtonText(label, selected)}
+            {getButtonText()}
           </span>
         </Button>
         {dropdownStates[filterKey as keyof typeof dropdownStates] && (
@@ -320,6 +281,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
                         )}
                       </span>
                     </div>
+                    <span className="text-xs text-gray-500">
+                      ({getOptionCount(option, filterKey)})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -328,19 +292,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
         )}
       </div>
     );
-  }, [
-    dropdownStates,
-    searchTerms,
-    handleMultiSelect,
-    handleClearAll,
-    toggleDropdown,
-    getSelectedValuesForType,
-    filterOptionsBySearch,
-    getButtonText
-  ]);
+  };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-200">
+    <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
         {renderFilterDropdown(
           'Fábrica',
@@ -368,8 +323,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
       </div>
     </div>
   );
-});
-
-ForecastFilters.displayName = 'ForecastFilters';
+};
 
 export default ForecastFilters;
