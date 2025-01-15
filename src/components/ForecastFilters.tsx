@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -49,7 +49,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: [...new Set(data.map(item => item.familia2))]
       };
     },
-    staleTime: Infinity // Prevent unnecessary refetches
+    staleTime: Infinity
   });
 
   const { data: filteredOptions } = useQuery({
@@ -88,7 +88,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       };
     },
     enabled: !!initialOptions,
-    staleTime: Infinity // Prevent unnecessary refetches
+    staleTime: Infinity
   });
 
   useEffect(() => {
@@ -104,7 +104,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMultiSelect = (
+  const handleMultiSelect = useCallback((
     value: string,
     type: string,
     event: React.MouseEvent
@@ -142,9 +142,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
     setSelected(newValues);
     onFilterChange(type, newValues);
-  };
+  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2, onFilterChange]);
 
-  const handleClearAll = (
+  const handleClearAll = useCallback((
     type: string,
     event: React.MouseEvent
   ) => {
@@ -167,16 +167,16 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
     
     onFilterChange(type, []);
-  };
+  }, [onFilterChange]);
 
-  const toggleDropdown = (key: string) => {
+  const toggleDropdown = useCallback((key: string) => {
     setDropdownStates(prev => ({
       ...prev,
       [key]: !prev[key as keyof typeof dropdownStates]
     }));
-  };
+  }, []);
 
-  const getSelectedValuesForType = (type: string): string[] => {
+  const getSelectedValuesForType = useCallback((type: string): string[] => {
     switch (type) {
       case 'fabrica':
         return selectedFactory;
@@ -189,30 +189,33 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       default:
         return [];
     }
-  };
+  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
-  const filterOptionsBySearch = (options: string[], searchTerm: string) => {
+  const filterOptionsBySearch = useCallback((options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
     const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
     return options.filter(option => 
       terms.every(term => option.toLowerCase().includes(term))
     );
-  };
+  }, []);
 
-  const renderFilterDropdown = (
+  const renderFilterDropdown = useCallback((
     label: string,
     options: string[],
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = useMemo(() => [...(options || [])].sort((a, b) => a.localeCompare(b)), [options]);
+    const sortedOptions = useMemo(() => 
+      [...(options || [])].sort((a, b) => a.localeCompare(b)), 
+      [options]
+    );
     const hasSelectedItems = selected.length > 0;
 
-    const getButtonText = () => {
+    const buttonText = useMemo(() => {
       if (selected.length === 0) return label;
       if (selected.length === 1) return `${label}: ${selected[0]}`;
       return `${label} (${selected.length})`;
-    };
+    }, [label, selected]);
 
     return (
       <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
@@ -228,7 +231,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           }`}
         >
           <span className="truncate">
-            {getButtonText()}
+            {buttonText}
           </span>
         </Button>
         {dropdownStates[filterKey as keyof typeof dropdownStates] && (
@@ -282,7 +285,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         )}
       </div>
     );
-  };
+  }, [dropdownStates, searchTerms, handleMultiSelect, handleClearAll, toggleDropdown, getSelectedValuesForType, filterOptionsBySearch]);
 
   if (isLoadingInitial) {
     return <div>Carregando filtros...</div>;
