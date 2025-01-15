@@ -31,7 +31,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // Query para buscar opções iniciais
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
@@ -54,7 +53,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
   });
 
-  // Query para buscar opções filtradas baseadas nas seleções atuais
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
@@ -107,17 +105,22 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     type: string,
     event?: React.MouseEvent
   ) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    
     let newValues: string[];
     
     if (event?.ctrlKey || event?.metaKey) {
+      // Multi-select with Ctrl/Cmd key
       if (currentSelected.includes(value)) {
         newValues = currentSelected.filter(v => v !== value);
       } else {
         newValues = [...currentSelected, value];
       }
     } else {
-      if (currentSelected.includes(value)) {
-        newValues = currentSelected.length === 1 ? [] : [value];
+      // Single select without Ctrl/Cmd key
+      if (currentSelected.includes(value) && currentSelected.length === 1) {
+        newValues = [];
       } else {
         newValues = [value];
       }
@@ -211,10 +214,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   className="h-8"
                 />
               </div>
-              <div className="flex mb-2 text-xs">
+              <div className="flex mb-2">
                 <button
                   onClick={() => handleClearAll(setter, filterKey)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   Limpar Seleção
                 </button>
