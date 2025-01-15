@@ -241,6 +241,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
     const tempSelected = tempSelections[filterKey as keyof typeof tempSelections];
     const currentSelected = dropdownStates[filterKey as keyof typeof dropdownStates] ? tempSelected : selected;
+    const hasSelectedItems = selected.length > 0;
 
     const getButtonText = () => {
       if (selected.length === 0) return label;
@@ -257,7 +258,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between ${selected.length > 0 ? 'border-blue-500 bg-blue-50/50' : ''}`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-blue-500 bg-blue-50/50' : ''}`}
         >
           <span className="truncate">
             {getButtonText()}
