@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +32,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const { data: initialOptions } = useQuery({
+  const { data: initialOptions, isLoading: isLoadingInitial } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
       console.log('Fetching initial filter options...');
@@ -48,10 +48,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia1: [...new Set(data.map(item => item.familia1))],
         familia2: [...new Set(data.map(item => item.familia2))]
       };
-    }
+    },
+    staleTime: Infinity // Prevent unnecessary refetches
   });
 
-  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
+  const { data: filteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
       console.log('Fetching filtered options with selections:', {
@@ -86,7 +87,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
       };
     },
-    enabled: !!initialOptions
+    enabled: !!initialOptions,
+    staleTime: Infinity // Prevent unnecessary refetches
   });
 
   useEffect(() => {
@@ -134,12 +136,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         return;
     }
 
-    let newValues: string[];
-    if (currentSelected.includes(value)) {
-      newValues = currentSelected.filter(v => v !== value);
-    } else {
-      newValues = [...currentSelected, value];
-    }
+    const newValues = currentSelected.includes(value)
+      ? currentSelected.filter(v => v !== value)
+      : [...currentSelected, value];
 
     setSelected(newValues);
     onFilterChange(type, newValues);
@@ -192,11 +191,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
   };
 
-  const getOptionCount = (option: string, filterKey: string) => {
-    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
-    return isAvailable ? 1 : 0;
-  };
-
   const filterOptionsBySearch = (options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
     const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
@@ -211,7 +205,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
+    const sortedOptions = useMemo(() => [...(options || [])].sort((a, b) => a.localeCompare(b)), [options]);
     const hasSelectedItems = selected.length > 0;
 
     const getButtonText = () => {
@@ -229,7 +223,9 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
+          className={`w-[180px] justify-between transition-colors duration-200 ${
+            hasSelectedItems ? 'border-green-800 bg-green-50 text-green-800 hover:bg-green-100' : ''
+          }`}
         >
           <span className="truncate">
             {getButtonText()}
@@ -276,14 +272,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                       />
                       <span className="text-sm font-medium">
                         {option}
-                        {selected.includes(option) && (
-                          <span className="ml-1 text-green-800">✓</span>
-                        )}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      ({getOptionCount(option, filterKey)})
-                    </span>
                   </div>
                 ))}
               </div>
@@ -294,6 +284,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     );
   };
 
+  if (isLoadingInitial) {
+    return <div>Carregando filtros...</div>;
+  }
+
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
@@ -302,22 +296,19 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           (filteredOptions?.fabrica || initialOptions?.fabrica || []),
           'fabrica'
         )}
-
         {renderFilterDropdown(
           'Cód Produto',
-          filteredOptions?.codigo || initialOptions?.codigo || [],
+          (filteredOptions?.codigo || initialOptions?.codigo || []),
           'codigo'
         )}
-
         {renderFilterDropdown(
           'Família 1',
-          filteredOptions?.familia1 || initialOptions?.familia1 || [],
+          (filteredOptions?.familia1 || initialOptions?.familia1 || []),
           'familia1'
         )}
-
         {renderFilterDropdown(
           'Família 2',
-          filteredOptions?.familia2 || initialOptions?.familia2 || [],
+          (filteredOptions?.familia2 || initialOptions?.familia2 || []),
           'familia2'
         )}
       </div>
