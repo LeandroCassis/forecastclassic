@@ -10,7 +10,7 @@ interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
-const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
+const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterChange }) => {
   const [selectedFactory, setSelectedFactory] = useState<string[]>([]);
   const [selectedCode, setSelectedCode] = useState<string[]>([]);
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
@@ -317,6 +317,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       </div>
     </div>
   );
-};
+});
+
+ForecastFilters.displayName = 'ForecastFilters';
 
 export default ForecastFilters;
