@@ -60,32 +60,72 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   });
 
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
-    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
+    queryKey: ['filtered-options', selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
-      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
+      // Base query
+      let baseQuery = supabase
+        .from('produtos')
+        .select('codigo, fabrica, familia1, familia2');
 
-      // Apply all filters except 'Todos'
-      const filters = [
-        { field: 'fabrica', values: selectedFactory },
-        { field: 'codigo', values: selectedCode },
-        { field: 'familia1', values: selectedFamily1 },
-        { field: 'familia2', values: selectedFamily2 }
-      ];
+      // Criar objeto com os filtros ativos
+      const activeFilters: Record<string, string[]> = {
+        fabrica: selectedFactory.filter(f => f !== 'Todos'),
+        codigo: selectedCode.filter(c => c !== 'Todos'),
+        familia1: selectedFamily1.filter(f => f !== 'Todos'),
+        familia2: selectedFamily2.filter(f => f !== 'Todos')
+      };
 
-      filters.forEach(({ field, values }) => {
-        if (values.length > 0 && !values.includes('Todos')) {
-          query = query.in(field, values);
+      // Aplicar filtros ativos à query base
+      Object.entries(activeFilters).forEach(([field, values]) => {
+        if (values.length > 0) {
+          baseQuery = baseQuery.in(field, values);
         }
       });
 
-      const { data, error } = await query;
+      // Executar query base para obter dados filtrados
+      const { data: filteredData, error } = await baseQuery;
       if (error) throw error;
 
-      return {
-        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
+      // Construir opções filtradas
+      const buildFilteredOptions = (data: any[]) => ({
+        ano: ['Todos', '2024', '2025', '2026'],
+        tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
         fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
+        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
         familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
         familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
+      });
+
+      // Criar queries separadas para cada filtro
+      const getOptionsForField = async (field: string, excludeField: string) => {
+        let query = supabase.from('produtos').select(field);
+        
+        // Aplicar todos os filtros ativos exceto o do campo atual
+        Object.entries(activeFilters).forEach(([filterField, values]) => {
+          if (values.length > 0 && filterField !== excludeField) {
+            query = query.in(filterField, values);
+          }
+        });
+
+        const { data } = await query;
+        return ['Todos', ...new Set(data?.map(item => item[field]) || [])];
+      };
+
+      // Obter opções filtradas para cada campo
+      const [fabricaOptions, codigoOptions, familia1Options, familia2Options] = await Promise.all([
+        getOptionsForField('fabrica', 'fabrica'),
+        getOptionsForField('codigo', 'codigo'),
+        getOptionsForField('familia1', 'familia1'),
+        getOptionsForField('familia2', 'familia2')
+      ]);
+
+      return {
+        ano: ['Todos', '2024', '2025', '2026'],
+        tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
+        fabrica: fabricaOptions,
+        codigo: codigoOptions,
+        familia1: familia1Options,
+        familia2: familia2Options
       };
     },
     enabled: !!initialOptions
@@ -95,7 +135,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     if (refetchFilteredOptions) {
       refetchFilteredOptions();
     }
-  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
+  }, [selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
   const handleMultiSelect = (
     value: string,
@@ -125,9 +165,19 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     onFilterChange(type, newValues);
   };
 
-  const getOptionCount = (option: string, data: any[]) => {
-    if (option === 'Todos') return data.length;
-    return data.filter(item => item === option).length;
+  const getOptionCount = (option: string, filterKey: string) => {
+    if (option === 'Todos') return 0;
+    
+    const activeFilters = {
+      fabrica: selectedFactory,
+      codigo: selectedCode,
+      familia1: selectedFamily1,
+      familia2: selectedFamily2
+    };
+
+    // Se a opção está nas opções filtradas, conte-a
+    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
+    return isAvailable ? 1 : 0;
   };
 
   const filterOptionsBySearch = (options: string[], searchTerm: string) => {
@@ -249,7 +299,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                       <span className="text-sm">{option}</span>
                     </div>
                     <span className="text-xs text-gray-500">
-                      ({getOptionCount(option, initialOptions?.[filterKey] || [])})
+                      ({getOptionCount(option, filterKey)})
                     </span>
                   </div>
                 ))}
@@ -266,18 +316,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       <div className="flex flex-wrap gap-4">
         {renderFilterDropdown(
           'Ano',
-          ['Todos', '2024', '2025', '2026'],
+          filteredOptions?.ano || ['Todos', '2024', '2025', '2026'],
           selectedYear,
-          (value, event) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', ['Todos', '2024', '2025', '2026'], event),
-          'year'
+          (value, event) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', filteredOptions?.ano || ['Todos', '2024', '2025', '2026'], event),
+          'ano'
         )}
 
         {renderFilterDropdown(
           'Tipo',
-          ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
+          filteredOptions?.tipo || ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
           selectedType,
-          (value, event) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'], event),
-          'type'
+          (value, event) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', filteredOptions?.tipo || ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'], event),
+          'tipo'
         )}
 
         {renderFilterDropdown(
