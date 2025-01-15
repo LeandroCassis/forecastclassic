@@ -197,19 +197,21 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
     switch (type) {
       case 'fabrica':
         setSelectedFactory([]);
+        onFilterChange(type, []);
         break;
       case 'codigo':
         setSelectedCode([]);
+        onFilterChange(type, []);
         break;
       case 'familia1':
         setSelectedFamily1([]);
+        onFilterChange(type, []);
         break;
       case 'familia2':
         setSelectedFamily2([]);
+        onFilterChange(type, []);
         break;
     }
-    
-    onFilterChange(type, []);
   }, [onFilterChange]);
 
   const toggleDropdown = useCallback((key: string) => {
@@ -266,7 +268,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50 hover:bg-green-100/50' : ''}`}
         >
           <span className="truncate">
             {getButtonText(label, selected)}
