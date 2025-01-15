@@ -16,7 +16,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
   const [selectedFamily2, setSelectedFamily2] = useState<string[]>([]);
   
-  // Temporary selections that will be applied when clicking outside
   const [tempSelections, setTempSelections] = useState<{
     fabrica: string[],
     codigo: string[],
@@ -98,24 +97,25 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     const handleClickOutside = (event: MouseEvent) => {
       Object.entries(dropdownRefs.current).forEach(([key, ref]) => {
         if (ref && !ref.contains(event.target as Node)) {
-          // Apply the temporary selections when closing the dropdown
           if (dropdownStates[key as keyof typeof dropdownStates]) {
+            const newValues = tempSelections[key as keyof typeof tempSelections];
+            
             switch (key) {
               case 'fabrica':
-                setSelectedFactory(tempSelections.fabrica);
-                onFilterChange('fabrica', tempSelections.fabrica);
+                setSelectedFactory(newValues);
+                onFilterChange('fabrica', newValues);
                 break;
               case 'codigo':
-                setSelectedCode(tempSelections.codigo);
-                onFilterChange('codigo', tempSelections.codigo);
+                setSelectedCode(newValues);
+                onFilterChange('codigo', newValues);
                 break;
               case 'familia1':
-                setSelectedFamily1(tempSelections.familia1);
-                onFilterChange('familia1', tempSelections.familia1);
+                setSelectedFamily1(newValues);
+                onFilterChange('familia1', newValues);
                 break;
               case 'familia2':
-                setSelectedFamily2(tempSelections.familia2);
-                onFilterChange('familia2', tempSelections.familia2);
+                setSelectedFamily2(newValues);
+                onFilterChange('familia2', newValues);
                 break;
             }
           }
@@ -153,7 +153,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       }
     }
 
-    // Update temporary selections instead of applying immediately
     setTempSelections(prev => ({
       ...prev,
       [type]: newValues
@@ -167,7 +166,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     event.preventDefault();
     event.stopPropagation();
     
-    // Clear both temporary and actual selections
     setTempSelections(prev => ({
       ...prev,
       [type]: []
@@ -192,11 +190,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   };
 
   const toggleDropdown = (key: string) => {
-    // When opening a dropdown, initialize its temporary selections with current selections
     if (!dropdownStates[key as keyof typeof dropdownStates]) {
+      const currentSelection = getSelectedValuesForType(key);
       setTempSelections(prev => ({
         ...prev,
-        [key]: getSelectedValuesForType(key)
+        [key]: [...currentSelection]
       }));
     }
     
@@ -242,6 +240,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   ) => {
     const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
     const tempSelected = tempSelections[filterKey as keyof typeof tempSelections];
+    const currentSelected = dropdownStates[filterKey as keyof typeof dropdownStates] ? tempSelected : selected;
 
     const getButtonText = () => {
       if (selected.length === 0) return label;
@@ -258,7 +257,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className="w-[180px] justify-between"
+          className={`w-[180px] justify-between ${selected.length > 0 ? 'border-blue-500 bg-blue-50/50' : ''}`}
         >
           <span className="truncate">
             {getButtonText()}
@@ -294,18 +293,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   <div
                     key={option}
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                      tempSelected.includes(option) ? 'bg-gray-100' : ''
+                      currentSelected.includes(option) ? 'bg-gray-100' : ''
                     }`}
-                    onClick={(e) => handleMultiSelect(option, tempSelected, filterKey, e)}
+                    onClick={(e) => handleMultiSelect(option, currentSelected, filterKey, e)}
                   >
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        checked={tempSelected.includes(option)}
+                        checked={currentSelected.includes(option)}
                         className="pointer-events-none"
                       />
                       <span className="text-sm font-medium">
                         {option}
-                        {tempSelected.includes(option) && (
+                        {currentSelected.includes(option) && (
                           <span className="ml-1 text-blue-600">✓</span>
                         )}
                       </span>
