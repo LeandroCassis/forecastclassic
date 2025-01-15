@@ -35,59 +35,62 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
-      console.log('Fetching initial filter options...');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
 
       if (error) throw error;
 
-      return {
-        codigo: [...new Set(data.map(item => item.codigo))],
-        fabrica: [...new Set(data.map(item => item.fabrica))],
-        familia1: [...new Set(data.map(item => item.familia1))],
-        familia2: [...new Set(data.map(item => item.familia2))]
+      const options = {
+        codigo: [...new Set(data.map(item => item.codigo))].filter(Boolean),
+        fabrica: [...new Set(data.map(item => item.fabrica))].filter(Boolean),
+        familia1: [...new Set(data.map(item => item.familia1))].filter(Boolean),
+        familia2: [...new Set(data.map(item => item.familia2))].filter(Boolean)
       };
-    }
+
+      // Inicializa as opções filtradas com os valores iniciais
+      setFilteredOptions(options);
+      return options;
+    },
+    staleTime: Infinity, // Mantém os dados em cache indefinidamente
+    cacheTime: Infinity
   });
 
-  const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
-    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
-    queryFn: async () => {
-      console.log('Fetching filtered options with selections:', {
-        selectedFactory,
-        selectedCode,
-        selectedFamily1,
-        selectedFamily2
-      });
-      
+  // Substitua a query de filteredOptions por um estado local
+  const [filteredOptions, setFilteredOptions] = useState<{
+    codigo: string[];
+    fabrica: string[];
+    familia1: string[];
+    familia2: string[];
+  } | null>(null);
+
+  // Atualize o useEffect para gerenciar as opções filtradas
+  useEffect(() => {
+    if (!initialOptions) return;
+
+    const filterProducts = async () => {
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
-      if (selectedFactory.length > 0) {
-        query = query.in('fabrica', selectedFactory);
-      }
-      if (selectedCode.length > 0) {
-        query = query.in('codigo', selectedCode);
-      }
-      if (selectedFamily1.length > 0) {
-        query = query.in('familia1', selectedFamily1);
-      }
-      if (selectedFamily2.length > 0) {
-        query = query.in('familia2', selectedFamily2);
-      }
+      if (selectedFactory.length > 0) query = query.in('fabrica', selectedFactory);
+      if (selectedCode.length > 0) query = query.in('codigo', selectedCode);
+      if (selectedFamily1.length > 0) query = query.in('familia1', selectedFamily1);
+      if (selectedFamily2.length > 0) query = query.in('familia2', selectedFamily2);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) return;
 
-      return {
-        fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])),
-        codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])),
-        familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])),
-        familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
+      const newOptions = {
+        fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])).filter(Boolean),
+        codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])).filter(Boolean),
+        familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])).filter(Boolean),
+        familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2])).filter(Boolean)
       };
-    },
-    enabled: !!initialOptions
-  });
+
+      setFilteredOptions(newOptions);
+    };
+
+    filterProducts();
+  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2, initialOptions]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -211,7 +214,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     filterKey: string
   ) => {
     const selected = getSelectedValuesForType(filterKey);
-    const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
+    const availableOptions = filteredOptions?.[filterKey as keyof typeof filteredOptions] || initialOptions?.[filterKey as keyof typeof initialOptions] || [];
+    const sortedOptions = [...new Set([...availableOptions, ...selected])].sort((a, b) => a.localeCompare(b));
     const hasSelectedItems = selected.length > 0;
 
     const getButtonText = () => {
