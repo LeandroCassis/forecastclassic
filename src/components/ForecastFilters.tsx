@@ -4,22 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { X, Check, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
 }
 
 const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => {
-  const [selectedYear, setSelectedYear] = useState<string[]>([]);
-  const [selectedType, setSelectedType] = useState<string[]>([]);
   const [selectedFactory, setSelectedFactory] = useState<string[]>([]);
   const [selectedCode, setSelectedCode] = useState<string[]>([]);
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
   const [selectedFamily2, setSelectedFamily2] = useState<string[]>([]);
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
-    year: '',
-    type: '',
     fabrica: '',
     codigo: '',
     familia1: '',
@@ -27,8 +23,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   });
 
   const [dropdownStates, setDropdownStates] = useState({
-    year: false,
-    type: false,
     fabrica: false,
     codigo: false,
     familia1: false,
@@ -62,7 +56,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   // Query para buscar opções filtradas baseadas nas seleções atuais
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
-    queryKey: ['filtered-options', selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
+    queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
       console.log('Fetching filtered options with current selections:', {
         selectedFactory,
@@ -73,7 +67,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
-      // Aplicar filtros ativos
       if (selectedFactory.length > 0 && !selectedFactory.includes('Todos')) {
         query = query.in('fabrica', selectedFactory);
       }
@@ -91,8 +84,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       if (error) throw error;
 
       return {
-        ano: ['Todos', '2024', '2025', '2026'],
-        tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
         fabrica: ['Todos', ...new Set([...selectedFactory.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.fabrica))])],
         codigo: ['Todos', ...new Set([...selectedCode.filter(c => c !== 'Todos'), ...new Set(data.map(item => item.codigo))])],
         familia1: ['Todos', ...new Set([...selectedFamily1.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.familia1))])],
@@ -107,7 +98,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       console.log('Refetching filtered options due to selection change');
       refetchFilteredOptions();
     }
-  }, [selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
+  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
   const handleMultiSelect = (
     value: string,
@@ -207,7 +198,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     label: string,
     options: string[],
     selected: string[],
-    onSelect: (value: string, event: React.MouseEvent) => void,
+    setter: (values: string[]) => void,
     filterKey: string
   ) => {
     const sortedOptions = [...options].sort((a, b) => {
@@ -251,13 +242,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               </div>
               <div className="flex justify-between mb-2 text-xs">
                 <button
-                  onClick={() => handleSelectAll(options, selected, onSelect)}
+                  onClick={() => handleSelectAll(options, setter, filterKey)}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   Selecionar Todos
                 </button>
                 <button
-                  onClick={() => handleClearAll(selected, onSelect)}
+                  onClick={() => handleClearAll(setter, filterKey)}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   Limpar Seleção
@@ -270,7 +261,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
                       selected.includes(option) ? 'bg-gray-100' : ''
                     }`}
-                    onClick={(e) => onSelect(option, e)}
+                    onClick={(e) => handleMultiSelect(option, selected, setter, filterKey, options, e)}
                   >
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -301,33 +292,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
         {renderFilterDropdown(
-          'Ano',
-          filteredOptions?.ano || ['Todos', '2024', '2025', '2026'],
-          selectedYear,
-          (value, event) => handleMultiSelect(value, selectedYear, setSelectedYear, 'ano', filteredOptions?.ano || ['Todos', '2024', '2025', '2026'], event),
-          'ano'
-        )}
-
-        {renderFilterDropdown(
-          'Tipo',
-          filteredOptions?.tipo || ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
-          selectedType,
-          (value, event) => handleMultiSelect(value, selectedType, setSelectedType, 'tipo', filteredOptions?.tipo || ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'], event),
-          'tipo'
-        )}
-
-        {renderFilterDropdown(
           'Fábrica',
           (filteredOptions?.fabrica || initialOptions?.fabrica || []),
           selectedFactory,
-          (value, event) => handleMultiSelect(
-            value, 
-            selectedFactory, 
-            setSelectedFactory, 
-            'fabrica', 
-            filteredOptions?.fabrica || initialOptions?.fabrica || [],
-            event
-          ),
+          setSelectedFactory,
           'fabrica'
         )}
 
@@ -335,14 +303,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Cód Produto',
           filteredOptions?.codigo || initialOptions?.codigo || [],
           selectedCode,
-          (value, event) => handleMultiSelect(
-            value, 
-            selectedCode, 
-            setSelectedCode, 
-            'codigo', 
-            filteredOptions?.codigo || initialOptions?.codigo || [],
-            event
-          ),
+          setSelectedCode,
           'codigo'
         )}
 
@@ -350,14 +311,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Família 1',
           filteredOptions?.familia1 || initialOptions?.familia1 || [],
           selectedFamily1,
-          (value, event) => handleMultiSelect(
-            value, 
-            selectedFamily1, 
-            setSelectedFamily1, 
-            'familia1', 
-            filteredOptions?.familia1 || initialOptions?.familia1 || [],
-            event
-          ),
+          setSelectedFamily1,
           'familia1'
         )}
 
@@ -365,14 +319,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
           'Família 2',
           filteredOptions?.familia2 || initialOptions?.familia2 || [],
           selectedFamily2,
-          (value, event) => handleMultiSelect(
-            value, 
-            selectedFamily2, 
-            setSelectedFamily2, 
-            'familia2', 
-            filteredOptions?.familia2 || initialOptions?.familia2 || [],
-            event
-          ),
+          setSelectedFamily2,
           'familia2'
         )}
       </div>
