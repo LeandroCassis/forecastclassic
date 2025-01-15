@@ -91,8 +91,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-[95%] mx-auto py-8 space-y-6">
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-8">
+      <div className="max-w-[95%] mx-auto py-8">
+        {/* Header section - no animations */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-8 mb-6">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -105,7 +106,7 @@ const Index = () => {
             <Button
               variant="outline"
               onClick={toggleFilters}
-              className="flex items-center gap-2 rounded-xl border-blue-200 hover:border-blue-300 hover:bg-blue-50/50"
+              className="flex items-center gap-2 rounded-xl border-blue-200"
             >
               {showFilters ? (
                 <>
@@ -122,11 +123,17 @@ const Index = () => {
           </div>
         </div>
         
-        {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
+        {/* Filters section - no animations */}
+        {showFilters && (
+          <div className="mb-6">
+            <ForecastFilters onFilterChange={handleFilterChange} />
+          </div>
+        )}
         
-        <div className="space-y-8">
+        {/* Products section - keeps animations */}
+        <div className="space-y-8 transition-all duration-300">
           {produtos?.map(produto => (
-            <div key={produto} className="space-y-0">
+            <div key={produto} className="space-y-0 animate-fade-in">
               <h2 className="text-2xl font-semibold text-blue-900 mb-4">{produto}</h2>
               <ProductHeader produto={produto} />
               <ForecastTable 
