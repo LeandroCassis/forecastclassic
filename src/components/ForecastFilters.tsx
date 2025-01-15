@@ -34,35 +34,24 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
-      console.log('Fetching initial filter options');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
 
       if (error) throw error;
 
-      const options = {
+      return {
         codigo: [...new Set(data.map(item => item.codigo))],
         fabrica: [...new Set(data.map(item => item.fabrica))],
         familia1: [...new Set(data.map(item => item.familia1))],
         familia2: [...new Set(data.map(item => item.familia2))]
       };
-      
-      console.log('Initial filter options fetched:', options);
-      return options;
     }
   });
 
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
-      console.log('Fetching filtered options with current selections:', {
-        selectedFactory,
-        selectedCode,
-        selectedFamily1,
-        selectedFamily2
-      });
-
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0) {
@@ -82,10 +71,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       if (error) throw error;
 
       return {
-        fabrica: [...new Set([...selectedFactory, ...new Set(data.map(item => item.fabrica))])],
-        codigo: [...new Set([...selectedCode, ...new Set(data.map(item => item.codigo))])],
-        familia1: [...new Set([...selectedFamily1, ...new Set(data.map(item => item.familia1))])],
-        familia2: [...new Set([...selectedFamily2, ...new Set(data.map(item => item.familia2))])]
+        fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])),
+        codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])),
+        familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])),
+        familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
       };
     },
     enabled: !!initialOptions
@@ -93,7 +82,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   useEffect(() => {
     if (refetchFilteredOptions) {
-      console.log('Refetching filtered options due to selection change');
       refetchFilteredOptions();
     }
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
@@ -107,30 +95,21 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     let newValues: string[];
-    
+
     if (event.ctrlKey || event.metaKey) {
-      // Multi-select with Ctrl/Cmd key
       if (currentSelected.includes(value)) {
-        // Remove if already selected
         newValues = currentSelected.filter(v => v !== value);
       } else {
-        // Add to selection
         newValues = [...currentSelected, value];
       }
     } else {
-      // Toggle selection without Ctrl/Cmd key
-      if (currentSelected.includes(value)) {
-        // Remove if already selected
-        newValues = currentSelected.filter(v => v !== value);
-      } else {
-        // Add if not selected
-        newValues = [...currentSelected, value];
-      }
+      newValues = currentSelected.includes(value)
+        ? []
+        : [value];
     }
-    
-    console.log(`Updating ${type} selection:`, newValues);
+
     setter(newValues);
     onFilterChange(type, newValues);
   };
