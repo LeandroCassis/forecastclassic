@@ -35,7 +35,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
-      console.log('Fetching initial filter options...');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
@@ -49,19 +48,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: [...new Set(data.map(item => item.familia2))]
       };
     },
-    staleTime: Infinity // Prevent unnecessary refetches
+    staleTime: Infinity,
+    cacheTime: Infinity
   });
 
   const { data: filteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
-      console.log('Fetching filtered options with selections:', {
-        selectedFactory,
-        selectedCode,
-        selectedFamily1,
-        selectedFamily2
-      });
-      
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0) {
@@ -88,7 +81,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       };
     },
     enabled: !!initialOptions,
-    staleTime: Infinity // Prevent unnecessary refetches
+    staleTime: Infinity,
+    cacheTime: Infinity
   });
 
   useEffect(() => {
@@ -191,10 +185,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     }
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
 
-  const getOptionCount = useCallback((option: string, filterKey: string) => {
-    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
-    return isAvailable ? 1 : 0;
-  }, [filteredOptions]);
+  const getButtonText = useCallback((label: string, selected: string[]) => {
+    if (selected.length === 0) return label;
+    if (selected.length === 1) return `${label}: ${selected[0]}`;
+    return `${label} (${selected.length})`;
+  }, []);
 
   const filterOptionsBySearch = useCallback((options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
@@ -202,12 +197,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     return options.filter(option => 
       terms.every(term => option.toLowerCase().includes(term))
     );
-  }, []);
-
-  const getButtonText = useCallback((label: string, selected: string[]) => {
-    if (selected.length === 0) return label;
-    if (selected.length === 1) return `${label}: ${selected[0]}`;
-    return `${label} (${selected.length})`;
   }, []);
 
   const renderFilterDropdown = useCallback((
@@ -228,7 +217,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
             e.stopPropagation();
             toggleDropdown(filterKey);
           }}
-          className={`w-[180px] justify-between transition-all duration-200 ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
+          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
         >
           <span className="truncate">
             {getButtonText(label, selected)}
@@ -263,7 +252,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                 {filterOptionsBySearch(sortedOptions, searchTerms[filterKey]).map((option) => (
                   <div
                     key={option}
-                    className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
                       selected.includes(option) ? 'bg-green-50' : ''
                     }`}
                     onClick={(e) => handleMultiSelect(option, filterKey, e)}
@@ -280,9 +269,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                         )}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      ({getOptionCount(option, filterKey)})
-                    </span>
                   </div>
                 ))}
               </div>
@@ -298,13 +284,12 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     handleClearAll,
     toggleDropdown,
     getSelectedValuesForType,
-    getOptionCount,
     filterOptionsBySearch,
     getButtonText
   ]);
 
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
+    <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-200">
       <div className="flex flex-wrap gap-4">
         {renderFilterDropdown(
           'Fábrica',
