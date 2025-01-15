@@ -43,10 +43,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       if (error) throw error;
 
       const options = {
-        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
-        fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
-        familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
-        familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
+        codigo: [...new Set(data.map(item => item.codigo))],
+        fabrica: [...new Set(data.map(item => item.fabrica))],
+        familia1: [...new Set(data.map(item => item.familia1))],
+        familia2: [...new Set(data.map(item => item.familia2))]
       };
       
       console.log('Initial filter options fetched:', options);
@@ -67,16 +67,16 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
-      if (selectedFactory.length > 0 && !selectedFactory.includes('Todos')) {
+      if (selectedFactory.length > 0) {
         query = query.in('fabrica', selectedFactory);
       }
-      if (selectedCode.length > 0 && !selectedCode.includes('Todos')) {
+      if (selectedCode.length > 0) {
         query = query.in('codigo', selectedCode);
       }
-      if (selectedFamily1.length > 0 && !selectedFamily1.includes('Todos')) {
+      if (selectedFamily1.length > 0) {
         query = query.in('familia1', selectedFamily1);
       }
-      if (selectedFamily2.length > 0 && !selectedFamily2.includes('Todos')) {
+      if (selectedFamily2.length > 0) {
         query = query.in('familia2', selectedFamily2);
       }
 
@@ -84,10 +84,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       if (error) throw error;
 
       return {
-        fabrica: ['Todos', ...new Set([...selectedFactory.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.fabrica))])],
-        codigo: ['Todos', ...new Set([...selectedCode.filter(c => c !== 'Todos'), ...new Set(data.map(item => item.codigo))])],
-        familia1: ['Todos', ...new Set([...selectedFamily1.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.familia1))])],
-        familia2: ['Todos', ...new Set([...selectedFamily2.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.familia2))])]
+        fabrica: [...new Set([...selectedFactory, ...new Set(data.map(item => item.fabrica))])],
+        codigo: [...new Set([...selectedCode, ...new Set(data.map(item => item.codigo))])],
+        familia1: [...new Set([...selectedFamily1, ...new Set(data.map(item => item.familia1))])],
+        familia2: [...new Set([...selectedFamily2, ...new Set(data.map(item => item.familia2))])]
       };
     },
     enabled: !!initialOptions
@@ -105,26 +105,21 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     currentSelected: string[],
     setter: (values: string[]) => void,
     type: string,
-    options: string[],
     event?: React.MouseEvent
   ) => {
     let newValues: string[];
     
-    if (value === 'Todos') {
-      newValues = currentSelected.includes('Todos') ? [] : options;
-    } else {
-      if (event?.ctrlKey || event?.metaKey) {
-        if (currentSelected.includes(value)) {
-          newValues = currentSelected.filter(v => v !== value && v !== 'Todos');
-        } else {
-          newValues = [...currentSelected.filter(v => v !== 'Todos'), value];
-        }
+    if (event?.ctrlKey || event?.metaKey) {
+      if (currentSelected.includes(value)) {
+        newValues = currentSelected.filter(v => v !== value);
       } else {
-        if (currentSelected.includes(value)) {
-          newValues = currentSelected.length === 1 ? [] : [value];
-        } else {
-          newValues = [value];
-        }
+        newValues = [...currentSelected, value];
+      }
+    } else {
+      if (currentSelected.includes(value)) {
+        newValues = currentSelected.length === 1 ? [] : [value];
+      } else {
+        newValues = [value];
       }
     }
     
@@ -134,15 +129,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   };
 
   const getOptionCount = (option: string, filterKey: string) => {
-    if (option === 'Todos') return 0;
-    
-    const activeFilters = {
-      fabrica: selectedFactory,
-      codigo: selectedCode,
-      familia1: selectedFamily1,
-      familia2: selectedFamily2
-    };
-
     const isAvailable = filteredOptions?.[filterKey]?.includes(option);
     return isAvailable ? 1 : 0;
   };
@@ -151,8 +137,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     if (!searchTerm) return options;
     const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
     return options.filter(option => 
-      terms.every(term => option.toLowerCase().includes(term)) ||
-      option === 'Todos'
+      terms.every(term => option.toLowerCase().includes(term))
     );
   };
 
@@ -168,16 +153,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleSelectAll = (
-    options: string[],
-    setter: (values: string[]) => void,
-    type: string
-  ) => {
-    const newValues = options.filter(opt => opt !== 'Todos');
-    setter(newValues);
-    onFilterChange(type, newValues);
-  };
 
   const handleClearAll = (
     setter: (values: string[]) => void,
@@ -201,11 +176,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     setter: (values: string[]) => void,
     filterKey: string
   ) => {
-    const sortedOptions = [...options].sort((a, b) => {
-      if (a === 'Todos') return -1;
-      if (b === 'Todos') return 1;
-      return a.localeCompare(b);
-    });
+    const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
 
     const getButtonText = () => {
       if (selected.length === 0) return label;
@@ -240,13 +211,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   className="h-8"
                 />
               </div>
-              <div className="flex justify-between mb-2 text-xs">
-                <button
-                  onClick={() => handleSelectAll(options, setter, filterKey)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Selecionar Todos
-                </button>
+              <div className="flex mb-2 text-xs">
                 <button
                   onClick={() => handleClearAll(setter, filterKey)}
                   className="text-blue-600 hover:text-blue-800"
@@ -261,7 +226,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
                       selected.includes(option) ? 'bg-gray-100' : ''
                     }`}
-                    onClick={(e) => handleMultiSelect(option, selected, setter, filterKey, options, e)}
+                    onClick={(e) => handleMultiSelect(option, selected, setter, filterKey, e)}
                   >
                     <div className="flex items-center space-x-2">
                       <Checkbox
