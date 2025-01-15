@@ -37,10 +37,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const { data: initialOptions, isLoading: initialLoading } = useQuery({
+  // Query para buscar opções iniciais
+  const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
-      console.log('Fetching filter options');
+      console.log('Fetching initial filter options');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
@@ -54,78 +55,49 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
       };
       
-      console.log('Filter options fetched:', options);
+      console.log('Initial filter options fetched:', options);
       return options;
     }
   });
 
+  // Query para buscar opções filtradas baseadas nas seleções atuais
   const { data: filteredOptions, refetch: refetchFilteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
-      // Base query
-      let baseQuery = supabase
-        .from('produtos')
-        .select('codigo, fabrica, familia1, familia2');
-
-      // Criar objeto com os filtros ativos
-      const activeFilters: Record<string, string[]> = {
-        fabrica: selectedFactory.filter(f => f !== 'Todos'),
-        codigo: selectedCode.filter(c => c !== 'Todos'),
-        familia1: selectedFamily1.filter(f => f !== 'Todos'),
-        familia2: selectedFamily2.filter(f => f !== 'Todos')
-      };
-
-      // Aplicar filtros ativos à query base
-      Object.entries(activeFilters).forEach(([field, values]) => {
-        if (values.length > 0) {
-          baseQuery = baseQuery.in(field, values);
-        }
+      console.log('Fetching filtered options with current selections:', {
+        selectedFactory,
+        selectedCode,
+        selectedFamily1,
+        selectedFamily2
       });
 
-      // Executar query base para obter dados filtrados
-      const { data: filteredData, error } = await baseQuery;
+      let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
+
+      // Aplicar filtros ativos
+      if (selectedFactory.length > 0 && !selectedFactory.includes('Todos')) {
+        query = query.in('fabrica', selectedFactory);
+      }
+      if (selectedCode.length > 0 && !selectedCode.includes('Todos')) {
+        query = query.in('codigo', selectedCode);
+      }
+      if (selectedFamily1.length > 0 && !selectedFamily1.includes('Todos')) {
+        query = query.in('familia1', selectedFamily1);
+      }
+      if (selectedFamily2.length > 0 && !selectedFamily2.includes('Todos')) {
+        query = query.in('familia2', selectedFamily2);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
-      // Construir opções filtradas
-      const buildFilteredOptions = (data: any[]) => ({
-        ano: ['Todos', '2024', '2025', '2026'],
-        tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
-        fabrica: ['Todos', ...new Set(data.map(item => item.fabrica))],
-        codigo: ['Todos', ...new Set(data.map(item => item.codigo))],
-        familia1: ['Todos', ...new Set(data.map(item => item.familia1))],
-        familia2: ['Todos', ...new Set(data.map(item => item.familia2))]
-      });
-
-      // Criar queries separadas para cada filtro
-      const getOptionsForField = async (field: string, excludeField: string) => {
-        let query = supabase.from('produtos').select(field);
-        
-        // Aplicar todos os filtros ativos exceto o do campo atual
-        Object.entries(activeFilters).forEach(([filterField, values]) => {
-          if (values.length > 0 && filterField !== excludeField) {
-            query = query.in(filterField, values);
-          }
-        });
-
-        const { data } = await query;
-        return ['Todos', ...new Set(data?.map(item => item[field]) || [])];
-      };
-
-      // Obter opções filtradas para cada campo
-      const [fabricaOptions, codigoOptions, familia1Options, familia2Options] = await Promise.all([
-        getOptionsForField('fabrica', 'fabrica'),
-        getOptionsForField('codigo', 'codigo'),
-        getOptionsForField('familia1', 'familia1'),
-        getOptionsForField('familia2', 'familia2')
-      ]);
-
+      // Construir opções filtradas mantendo as seleções atuais
       return {
         ano: ['Todos', '2024', '2025', '2026'],
         tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
-        fabrica: fabricaOptions,
-        codigo: codigoOptions,
-        familia1: familia1Options,
-        familia2: familia2Options
+        fabrica: ['Todos', ...new Set([...selectedFactory.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.fabrica))])],
+        codigo: ['Todos', ...new Set([...selectedCode.filter(c => c !== 'Todos'), ...new Set(data.map(item => item.codigo))])],
+        familia1: ['Todos', ...new Set([...selectedFamily1.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.familia1))])],
+        familia2: ['Todos', ...new Set([...selectedFamily2.filter(f => f !== 'Todos'), ...new Set(data.map(item => item.familia2))])]
       };
     },
     enabled: !!initialOptions
@@ -133,6 +105,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   useEffect(() => {
     if (refetchFilteredOptions) {
+      console.log('Refetching filtered options due to selection change');
       refetchFilteredOptions();
     }
   }, [selectedYear, selectedType, selectedFactory, selectedCode, selectedFamily1, selectedFamily2]);
@@ -148,27 +121,24 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     let newValues: string[];
     
     if (value === 'Todos') {
-      // Se "Todos" já está selecionado, limpa a seleção
-      // Caso contrário, seleciona todas as opções
       newValues = currentSelected.includes('Todos') ? [] : options;
     } else {
-      if (event?.ctrlKey) {
-        // Comportamento Multi-select com CTRL
+      if (event?.ctrlKey || event?.metaKey) {
         if (currentSelected.includes(value)) {
           newValues = currentSelected.filter(v => v !== value && v !== 'Todos');
         } else {
           newValues = [...currentSelected.filter(v => v !== 'Todos'), value];
         }
       } else {
-        // Comportamento normal - mantém seleção anterior se clicar em item já selecionado
-        if (currentSelected.length === 1 && currentSelected[0] === value) {
-          newValues = currentSelected;
+        if (currentSelected.includes(value)) {
+          newValues = currentSelected.length === 1 ? [] : [value];
         } else {
           newValues = [value];
         }
       }
     }
     
+    console.log(`Updating ${type} selection:`, newValues);
     setter(newValues);
     onFilterChange(type, newValues);
   };
