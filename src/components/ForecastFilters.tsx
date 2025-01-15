@@ -90,7 +90,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Construir opções filtradas mantendo as seleções atuais
       return {
         ano: ['Todos', '2024', '2025', '2026'],
         tipo: ['Todos', 'REAL', 'REVISÃO', 'ORÇAMENTO'],
@@ -153,7 +152,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       familia2: selectedFamily2
     };
 
-    // Se a opção está nas opções filtradas, conte-a
     const isAvailable = filteredOptions?.[filterKey]?.includes(option);
     return isAvailable ? 1 : 0;
   };
@@ -218,7 +216,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       return a.localeCompare(b);
     });
 
-    // Calcula o texto do botão baseado na seleção atual
     const getButtonText = () => {
       if (selected.length === 0) return label;
       if (selected.length === 1) return `${label}: ${selected[0]}`;
@@ -254,13 +251,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
               </div>
               <div className="flex justify-between mb-2 text-xs">
                 <button
-                  onClick={() => handleSelectAll(options, selected, onSelect, filterKey)}
+                  onClick={() => handleSelectAll(options, selected, onSelect)}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   Selecionar Todos
                 </button>
                 <button
-                  onClick={() => handleClearAll(selected, onSelect, filterKey)}
+                  onClick={() => handleClearAll(selected, onSelect)}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   Limpar Seleção
