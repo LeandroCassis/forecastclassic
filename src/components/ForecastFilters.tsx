@@ -32,29 +32,42 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Initial options query with infinite stale time to prevent re-fetches
   const { data: initialOptions } = useQuery({
     queryKey: ['initial-filter-options'],
     queryFn: async () => {
+      console.log('Fetching initial filter options...');
       const { data, error } = await supabase
         .from('produtos')
         .select('codigo, fabrica, familia1, familia2');
 
       if (error) throw error;
 
-      return {
+      const uniqueOptions = {
         codigo: [...new Set(data.map(item => item.codigo))],
         fabrica: [...new Set(data.map(item => item.fabrica))],
         familia1: [...new Set(data.map(item => item.familia1))],
         familia2: [...new Set(data.map(item => item.familia2))]
       };
+      
+      console.log('Initial filter options fetched:', uniqueOptions);
+      return uniqueOptions;
     },
     staleTime: Infinity,
     gcTime: Infinity
   });
 
+  // Filtered options query with memoized dependencies
   const { data: filteredOptions } = useQuery({
     queryKey: ['filtered-options', selectedFactory, selectedCode, selectedFamily1, selectedFamily2],
     queryFn: async () => {
+      console.log('Fetching filtered options with selections:', {
+        selectedFactory,
+        selectedCode,
+        selectedFamily1,
+        selectedFamily2
+      });
+
       let query = supabase.from('produtos').select('codigo, fabrica, familia1, familia2');
 
       if (selectedFactory.length > 0) {
@@ -73,12 +86,15 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
       const { data, error } = await query;
       if (error) throw error;
 
-      return {
+      const filteredData = {
         fabrica: Array.from(new Set([...data.map(item => item.fabrica), ...selectedFactory])),
         codigo: Array.from(new Set([...data.map(item => item.codigo), ...selectedCode])),
         familia1: Array.from(new Set([...data.map(item => item.familia1), ...selectedFamily1])),
         familia2: Array.from(new Set([...data.map(item => item.familia2), ...selectedFamily2]))
       };
+
+      console.log('Filtered options fetched:', filteredData);
+      return filteredData;
     },
     enabled: !!initialOptions,
     staleTime: Infinity,
@@ -105,38 +121,47 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    console.log('Handling multi-select:', { value, type });
 
-    let currentSelected: string[];
-    let setSelected: React.Dispatch<React.SetStateAction<string[]>>;
+    const updateSelection = (currentSelected: string[]) => {
+      const newValues = currentSelected.includes(value)
+        ? currentSelected.filter(v => v !== value)
+        : [...currentSelected, value];
+      console.log('Updated selection:', newValues);
+      return newValues;
+    };
 
     switch (type) {
       case 'fabrica':
-        currentSelected = selectedFactory;
-        setSelected = setSelectedFactory;
+        setSelectedFactory(prev => {
+          const newValues = updateSelection(prev);
+          onFilterChange(type, newValues);
+          return newValues;
+        });
         break;
       case 'codigo':
-        currentSelected = selectedCode;
-        setSelected = setSelectedCode;
+        setSelectedCode(prev => {
+          const newValues = updateSelection(prev);
+          onFilterChange(type, newValues);
+          return newValues;
+        });
         break;
       case 'familia1':
-        currentSelected = selectedFamily1;
-        setSelected = setSelectedFamily1;
+        setSelectedFamily1(prev => {
+          const newValues = updateSelection(prev);
+          onFilterChange(type, newValues);
+          return newValues;
+        });
         break;
       case 'familia2':
-        currentSelected = selectedFamily2;
-        setSelected = setSelectedFamily2;
+        setSelectedFamily2(prev => {
+          const newValues = updateSelection(prev);
+          onFilterChange(type, newValues);
+          return newValues;
+        });
         break;
-      default:
-        return;
     }
-
-    const newValues = currentSelected.includes(value)
-      ? currentSelected.filter(v => v !== value)
-      : [...currentSelected, value];
-
-    setSelected(newValues);
-    onFilterChange(type, newValues);
-  }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2, onFilterChange]);
+  }, [onFilterChange]);
 
   const handleClearAll = useCallback((
     type: string,
@@ -144,6 +169,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = React.memo(({ onFilterCh
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    console.log('Clearing all selections for type:', type);
     
     switch (type) {
       case 'fabrica':
