@@ -16,18 +16,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const [selectedFamily1, setSelectedFamily1] = useState<string[]>([]);
   const [selectedFamily2, setSelectedFamily2] = useState<string[]>([]);
   
-  const [tempSelections, setTempSelections] = useState<{
-    fabrica: string[],
-    codigo: string[],
-    familia1: string[],
-    familia2: string[]
-  }>({
-    fabrica: [],
-    codigo: [],
-    familia1: [],
-    familia2: []
-  });
-
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({
     fabrica: '',
     codigo: '',
@@ -105,28 +93,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     const handleClickOutside = (event: MouseEvent) => {
       Object.entries(dropdownRefs.current).forEach(([key, ref]) => {
         if (ref && !ref.contains(event.target as Node)) {
-          if (dropdownStates[key as keyof typeof dropdownStates]) {
-            const newValues = tempSelections[key as keyof typeof tempSelections];
-            
-            switch (key) {
-              case 'fabrica':
-                setSelectedFactory(newValues);
-                onFilterChange('fabrica', newValues);
-                break;
-              case 'codigo':
-                setSelectedCode(newValues);
-                onFilterChange('codigo', newValues);
-                break;
-              case 'familia1':
-                setSelectedFamily1(newValues);
-                onFilterChange('familia1', newValues);
-                break;
-              case 'familia2':
-                setSelectedFamily2(newValues);
-                onFilterChange('familia2', newValues);
-                break;
-            }
-          }
           setDropdownStates(prev => ({ ...prev, [key]: false }));
         }
       });
@@ -134,37 +100,49 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [tempSelections, onFilterChange]);
+  }, []);
 
   const handleMultiSelect = (
     value: string,
-    currentSelected: string[],
     type: string,
     event: React.MouseEvent
   ) => {
     event.preventDefault();
     event.stopPropagation();
 
-    let newValues: string[];
+    let currentSelected: string[];
+    let setSelected: React.Dispatch<React.SetStateAction<string[]>>;
 
-    if (event.ctrlKey || event.metaKey) {
-      if (currentSelected.includes(value)) {
-        newValues = currentSelected.filter(v => v !== value);
-      } else {
-        newValues = [...currentSelected, value];
-      }
-    } else {
-      if (currentSelected.includes(value)) {
-        newValues = currentSelected.filter(v => v !== value);
-      } else {
-        newValues = [...currentSelected, value];
-      }
+    switch (type) {
+      case 'fabrica':
+        currentSelected = selectedFactory;
+        setSelected = setSelectedFactory;
+        break;
+      case 'codigo':
+        currentSelected = selectedCode;
+        setSelected = setSelectedCode;
+        break;
+      case 'familia1':
+        currentSelected = selectedFamily1;
+        setSelected = setSelectedFamily1;
+        break;
+      case 'familia2':
+        currentSelected = selectedFamily2;
+        setSelected = setSelectedFamily2;
+        break;
+      default:
+        return;
     }
 
-    setTempSelections(prev => ({
-      ...prev,
-      [type]: newValues
-    }));
+    let newValues: string[];
+    if (currentSelected.includes(value)) {
+      newValues = currentSelected.filter(v => v !== value);
+    } else {
+      newValues = [...currentSelected, value];
+    }
+
+    setSelected(newValues);
+    onFilterChange(type, newValues);
   };
 
   const handleClearAll = (
@@ -173,11 +151,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    setTempSelections(prev => ({
-      ...prev,
-      [type]: []
-    }));
     
     switch (type) {
       case 'fabrica':
@@ -198,14 +171,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   };
 
   const toggleDropdown = (key: string) => {
-    if (!dropdownStates[key as keyof typeof dropdownStates]) {
-      const currentSelection = getSelectedValuesForType(key);
-      setTempSelections(prev => ({
-        ...prev,
-        [key]: [...currentSelection]
-      }));
-    }
-    
     setDropdownStates(prev => ({
       ...prev,
       [key]: !prev[key as keyof typeof dropdownStates]
@@ -243,12 +208,10 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
   const renderFilterDropdown = (
     label: string,
     options: string[],
-    selected: string[],
     filterKey: string
   ) => {
+    const selected = getSelectedValuesForType(filterKey);
     const sortedOptions = [...options].sort((a, b) => a.localeCompare(b));
-    const tempSelected = tempSelections[filterKey as keyof typeof tempSelections];
-    const currentSelected = dropdownStates[filterKey as keyof typeof dropdownStates] ? tempSelected : selected;
     const hasSelectedItems = selected.length > 0;
 
     const getButtonText = () => {
@@ -302,18 +265,18 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
                   <div
                     key={option}
                     className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                      currentSelected.includes(option) ? 'bg-green-50' : ''
+                      selected.includes(option) ? 'bg-green-50' : ''
                     }`}
-                    onClick={(e) => handleMultiSelect(option, currentSelected, filterKey, e)}
+                    onClick={(e) => handleMultiSelect(option, filterKey, e)}
                   >
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        checked={currentSelected.includes(option)}
+                        checked={selected.includes(option)}
                         className="pointer-events-none"
                       />
                       <span className="text-sm font-medium">
                         {option}
-                        {currentSelected.includes(option) && (
+                        {selected.includes(option) && (
                           <span className="ml-1 text-green-800">✓</span>
                         )}
                       </span>
@@ -337,28 +300,24 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         {renderFilterDropdown(
           'Fábrica',
           (filteredOptions?.fabrica || initialOptions?.fabrica || []),
-          selectedFactory,
           'fabrica'
         )}
 
         {renderFilterDropdown(
           'Cód Produto',
           filteredOptions?.codigo || initialOptions?.codigo || [],
-          selectedCode,
           'codigo'
         )}
 
         {renderFilterDropdown(
           'Família 1',
           filteredOptions?.familia1 || initialOptions?.familia1 || [],
-          selectedFamily1,
           'familia1'
         )}
 
         {renderFilterDropdown(
           'Família 2',
           filteredOptions?.familia2 || initialOptions?.familia2 || [],
-          selectedFamily2,
           'familia2'
         )}
       </div>
