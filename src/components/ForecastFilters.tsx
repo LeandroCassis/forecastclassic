@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +34,8 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     familia1: false,
     familia2: false
   });
+
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { data: initialOptions, isLoading: initialLoading } = useQuery({
     queryKey: ['initial-filter-options'],
@@ -123,12 +125,49 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     onFilterChange(type, newValues);
   };
 
+  const getOptionCount = (option: string, data: any[]) => {
+    if (option === 'Todos') return data.length;
+    return data.filter(item => item === option).length;
+  };
+
   const filterOptionsBySearch = (options: string[], searchTerm: string) => {
     if (!searchTerm) return options;
+    const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
     return options.filter(option => 
-      option.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      terms.every(term => option.toLowerCase().includes(term)) ||
       option === 'Todos'
     );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      Object.entries(dropdownRefs.current).forEach(([key, ref]) => {
+        if (ref && !ref.contains(event.target as Node)) {
+          setDropdownStates(prev => ({ ...prev, [key]: false }));
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectAll = (
+    options: string[],
+    setter: (values: string[]) => void,
+    type: string
+  ) => {
+    const newValues = options.filter(opt => opt !== 'Todos');
+    setter(newValues);
+    onFilterChange(type, newValues);
+  };
+
+  const handleClearAll = (
+    setter: (values: string[]) => void,
+    type: string
+  ) => {
+    setter([]);
+    onFilterChange(type, []);
   };
 
   const toggleDropdown = (key: string) => {
@@ -144,59 +183,83 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     selected: string[],
     onSelect: (value: string, event: React.MouseEvent) => void,
     filterKey: string
-  ) => (
-    <div className="relative">
-      <Button
-        variant="outline"
-        onClick={() => toggleDropdown(filterKey)}
-        className="w-[180px] justify-between"
-      >
-        {label}
-        <span className="ml-2">
-          {selected.length > 0 ? `(${selected.length})` : ''}
-        </span>
-      </Button>
-      {dropdownStates[filterKey as keyof typeof dropdownStates] && (
-        <div className="absolute z-50 w-[250px] mt-2 bg-white border rounded-md shadow-lg">
-          <div className="p-2">
-            <div className="flex items-center space-x-2 mb-2">
-              <Search className="h-4 w-4 text-gray-500" />
-              <Input
-                type="text"
-                placeholder="Pesquisar..."
-                value={searchTerms[filterKey]}
-                onChange={(e) => setSearchTerms(prev => ({
-                  ...prev,
-                  [filterKey]: e.target.value
-                }))}
-                className="h-8"
-              />
-            </div>
-            <div className="text-xs text-gray-500 mb-2">
-              Segure CTRL para selecionar múltiplos itens
-            </div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto">
-              {filterOptionsBySearch(options, searchTerms[filterKey]).map((option) => (
-                <div
-                  key={option}
-                  className={`flex items-center space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                    selected.includes(option) ? 'bg-gray-50' : ''
-                  }`}
-                  onClick={(e) => onSelect(option, e)}
+  ) => {
+    const sortedOptions = [...options].sort((a, b) => {
+      if (a === 'Todos') return -1;
+      if (b === 'Todos') return 1;
+      return a.localeCompare(b);
+    });
+
+    return (
+      <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
+        <Button
+          variant="outline"
+          onClick={() => toggleDropdown(filterKey)}
+          className="w-[180px] justify-between"
+        >
+          {label}
+          <span className="ml-2">
+            {selected.length > 0 ? `(${selected.length})` : ''}
+          </span>
+        </Button>
+        {dropdownStates[filterKey as keyof typeof dropdownStates] && (
+          <div className="absolute z-50 w-[250px] mt-2 bg-white border rounded-md shadow-lg">
+            <div className="p-2">
+              <div className="flex items-center space-x-2 mb-2">
+                <Search className="h-4 w-4 text-gray-500" />
+                <Input
+                  type="text"
+                  placeholder="Pesquisar..."
+                  value={searchTerms[filterKey]}
+                  onChange={(e) => setSearchTerms(prev => ({
+                    ...prev,
+                    [filterKey]: e.target.value
+                  }))}
+                  className="h-8"
+                />
+              </div>
+              <div className="flex justify-between mb-2 text-xs">
+                <button
+                  onClick={() => handleSelectAll(options, selected, onSelect, filterKey)}
+                  className="text-blue-600 hover:text-blue-800"
                 >
-                  <Checkbox
-                    checked={selected.includes(option)}
-                    className="pointer-events-none"
-                  />
-                  <span className="text-sm">{option}</span>
-                </div>
-              ))}
+                  Selecionar Todos
+                </button>
+                <button
+                  onClick={() => handleClearAll(selected, onSelect, filterKey)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Limpar Seleção
+                </button>
+              </div>
+              <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                {filterOptionsBySearch(sortedOptions, searchTerms[filterKey]).map((option) => (
+                  <div
+                    key={option}
+                    className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
+                      selected.includes(option) ? 'bg-gray-50' : ''
+                    }`}
+                    onClick={(e) => onSelect(option, e)}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={selected.includes(option)}
+                        className="pointer-events-none"
+                      />
+                      <span className="text-sm">{option}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      ({getOptionCount(option, initialOptions?.[filterKey] || [])})
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
