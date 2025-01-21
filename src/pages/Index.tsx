@@ -1,18 +1,24 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
+import FilterComponent from '@/components/FilterComponent';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
 const Index = () => {
+  const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
+  const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
+  const [selectedFamilia1, setSelectedFamilia1] = useState<string[]>([]);
+  const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
+  const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
+
   const { data: produtos, isLoading } = useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Supabase...');
       const { data, error } = await supabase
         .from('produtos')
-        .select('produto')
-        .order('produto');
+        .select('produto, marca, fabrica, familia1, familia2');
       
       if (error) {
         console.error('Error fetching produtos:', error);
@@ -20,9 +26,41 @@ const Index = () => {
       }
       
       console.log('Fetched produtos:', data);
-      return data.map(p => p.produto);
+      return data;
     }
   });
+
+  const filters = useMemo(() => {
+    if (!produtos) return {
+      marcas: [],
+      fabricas: [],
+      familia1: [],
+      familia2: [],
+      produtos: []
+    };
+
+    return {
+      marcas: [...new Set(produtos.map(p => p.marca))],
+      fabricas: [...new Set(produtos.map(p => p.fabrica))],
+      familia1: [...new Set(produtos.map(p => p.familia1))],
+      familia2: [...new Set(produtos.map(p => p.familia2))],
+      produtos: [...new Set(produtos.map(p => p.produto))]
+    };
+  }, [produtos]);
+
+  const filteredProdutos = useMemo(() => {
+    if (!produtos) return [];
+    
+    return produtos.filter(produto => {
+      const matchesMarca = selectedMarcas.length === 0 || selectedMarcas.includes(produto.marca);
+      const matchesFabrica = selectedFabricas.length === 0 || selectedFabricas.includes(produto.fabrica);
+      const matchesFamilia1 = selectedFamilia1.length === 0 || selectedFamilia1.includes(produto.familia1);
+      const matchesFamilia2 = selectedFamilia2.length === 0 || selectedFamilia2.includes(produto.familia2);
+      const matchesProduto = selectedProdutos.length === 0 || selectedProdutos.includes(produto.produto);
+
+      return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
+    });
+  }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
   if (isLoading) {
     return (
@@ -48,14 +86,47 @@ const Index = () => {
               Visualização e edição de previsões de vendas
             </p>
           </div>
+          
+          <div className="mt-6 flex flex-wrap gap-4">
+            <FilterComponent
+              label="Marca"
+              options={filters.marcas}
+              selectedValues={selectedMarcas}
+              onSelectionChange={setSelectedMarcas}
+            />
+            <FilterComponent
+              label="Fábrica"
+              options={filters.fabricas}
+              selectedValues={selectedFabricas}
+              onSelectionChange={setSelectedFabricas}
+            />
+            <FilterComponent
+              label="Família 1"
+              options={filters.familia1}
+              selectedValues={selectedFamilia1}
+              onSelectionChange={setSelectedFamilia1}
+            />
+            <FilterComponent
+              label="Família 2"
+              options={filters.familia2}
+              selectedValues={selectedFamilia2}
+              onSelectionChange={setSelectedFamilia2}
+            />
+            <FilterComponent
+              label="Produto"
+              options={filters.produtos}
+              selectedValues={selectedProdutos}
+              onSelectionChange={setSelectedProdutos}
+            />
+          </div>
         </div>
         
         <div className="space-y-8">
-          {produtos?.map(produto => (
-            <div key={produto} className="space-y-0 animate-fade-in">
-              <h2 className="text-2xl font-semibold text-blue-900 mb-4">{produto}</h2>
-              <ProductHeader produto={produto} />
-              <ForecastTable produto={produto} />
+          {filteredProdutos.map(produto => (
+            <div key={produto.produto} className="space-y-0 animate-fade-in">
+              <h2 className="text-2xl font-semibold text-blue-900 mb-4">{produto.produto}</h2>
+              <ProductHeader produto={produto.produto} />
+              <ForecastTable produto={produto.produto} />
             </div>
           ))}
         </div>
