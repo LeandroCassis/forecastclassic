@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ForecastFiltersProps {
   onFilterChange: (filterType: string, values: string[]) => void;
@@ -48,15 +49,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: [...new Set(data.map(item => item.familia2))].filter(Boolean)
       };
 
-      // Inicializa as opções filtradas com os valores iniciais
       setFilteredOptions(options);
       return options;
     },
-    staleTime: Infinity, // Mantém os dados em cache indefinidamente
-    cacheTime: Infinity
+    gcTime: Infinity,
+    staleTime: Infinity
   });
 
-  // Substitua a query de filteredOptions por um estado local
   const [filteredOptions, setFilteredOptions] = useState<{
     codigo: string[];
     fabrica: string[];
@@ -64,7 +63,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     familia2: string[];
   } | null>(null);
 
-  // Atualize o useEffect para gerenciar as opções filtradas
   useEffect(() => {
     if (!initialOptions) return;
 
@@ -92,27 +90,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     filterProducts();
   }, [selectedFactory, selectedCode, selectedFamily1, selectedFamily2, initialOptions]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      Object.entries(dropdownRefs.current).forEach(([key, ref]) => {
-        if (ref && !ref.contains(event.target as Node)) {
-          setDropdownStates(prev => ({ ...prev, [key]: false }));
-        }
-      });
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleMultiSelect = (
-    value: string,
-    type: string,
-    event: React.MouseEvent
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const handleMultiSelect = (value: string, type: string) => {
     let currentSelected: string[];
     let setSelected: React.Dispatch<React.SetStateAction<string[]>>;
 
@@ -137,158 +115,117 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         return;
     }
 
-    let newValues: string[];
-    if (currentSelected.includes(value)) {
-      newValues = currentSelected.filter(v => v !== value);
-    } else {
-      newValues = [...currentSelected, value];
-    }
+    const newValues = currentSelected.includes(value)
+      ? currentSelected.filter(v => v !== value)
+      : [...currentSelected, value];
 
     setSelected(newValues);
     onFilterChange(type, newValues);
   };
 
-  const handleClearAll = (
-    type: string,
-    event: React.MouseEvent
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    
+  const handleSelectAll = (type: string, options: string[]) => {
+    let setSelected: React.Dispatch<React.SetStateAction<string[]>>;
+    let currentSelected: string[];
+
     switch (type) {
       case 'fabrica':
-        setSelectedFactory([]);
+        setSelected = setSelectedFactory;
+        currentSelected = selectedFactory;
         break;
       case 'codigo':
-        setSelectedCode([]);
+        setSelected = setSelectedCode;
+        currentSelected = selectedCode;
         break;
       case 'familia1':
-        setSelectedFamily1([]);
+        setSelected = setSelectedFamily1;
+        currentSelected = selectedFamily1;
         break;
       case 'familia2':
-        setSelectedFamily2([]);
+        setSelected = setSelectedFamily2;
+        currentSelected = selectedFamily2;
         break;
-    }
-    
-    onFilterChange(type, []);
-  };
-
-  const toggleDropdown = (key: string) => {
-    setDropdownStates(prev => ({
-      ...prev,
-      [key]: !prev[key as keyof typeof dropdownStates]
-    }));
-  };
-
-  const getSelectedValuesForType = (type: string): string[] => {
-    switch (type) {
-      case 'fabrica':
-        return selectedFactory;
-      case 'codigo':
-        return selectedCode;
-      case 'familia1':
-        return selectedFamily1;
-      case 'familia2':
-        return selectedFamily2;
       default:
-        return [];
+        return;
     }
+
+    const newValues = currentSelected.length === options.length ? [] : options;
+    setSelected(newValues);
+    onFilterChange(type, newValues);
   };
 
-  const getOptionCount = (option: string, filterKey: string) => {
-    const isAvailable = filteredOptions?.[filterKey]?.includes(option);
-    return isAvailable ? 1 : 0;
-  };
-
-  const filterOptionsBySearch = (options: string[], searchTerm: string) => {
-    if (!searchTerm) return options;
-    const terms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
-    return options.filter(option => 
-      terms.every(term => option.toLowerCase().includes(term))
+  const renderFilterDropdown = (label: string, type: string) => {
+    const options = filteredOptions?.[type as keyof typeof filteredOptions] || 
+                   initialOptions?.[type as keyof typeof initialOptions] || [];
+    const selected = type === 'fabrica' ? selectedFactory :
+                    type === 'codigo' ? selectedCode :
+                    type === 'familia1' ? selectedFamily1 : selectedFamily2;
+    
+    const filteredItems = options.filter(option => 
+      option.toLowerCase().includes(searchTerms[type].toLowerCase())
     );
-  };
-
-  const renderFilterDropdown = (
-    label: string,
-    options: string[],
-    filterKey: string
-  ) => {
-    const selected = getSelectedValuesForType(filterKey);
-    const availableOptions = filteredOptions?.[filterKey as keyof typeof filteredOptions] || initialOptions?.[filterKey as keyof typeof initialOptions] || [];
-    const sortedOptions = [...new Set([...availableOptions, ...selected])].sort((a, b) => a.localeCompare(b));
-    const hasSelectedItems = selected.length > 0;
-
-    const getButtonText = () => {
-      if (selected.length === 0) return label;
-      if (selected.length === 1) return `${label}: ${selected[0]}`;
-      return `${label} (${selected.length})`;
-    };
 
     return (
-      <div className="relative" ref={el => dropdownRefs.current[filterKey] = el}>
+      <div className="relative" ref={el => dropdownRefs.current[type] = el}>
         <Button
           variant="outline"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleDropdown(filterKey);
-          }}
-          className={`w-[180px] justify-between ${hasSelectedItems ? 'border-green-800 bg-green-50/50' : ''}`}
+          onClick={() => setDropdownStates(prev => ({ ...prev, [type]: !prev[type] }))}
+          className={cn(
+            "w-full justify-between",
+            selected.length > 0 && "border-blue-500 bg-blue-50/50"
+          )}
         >
           <span className="truncate">
-            {getButtonText()}
+            {selected.length > 0 
+              ? `${label} (${selected.length})`
+              : label}
           </span>
+          {dropdownStates[type as keyof typeof dropdownStates] 
+            ? <ChevronUp className="h-4 w-4" />
+            : <ChevronDown className="h-4 w-4" />}
         </Button>
-        {dropdownStates[filterKey as keyof typeof dropdownStates] && (
-          <div className="absolute z-50 w-[250px] mt-2 bg-white border rounded-md shadow-lg">
-            <div className="p-2">
-              <div className="flex items-center space-x-2 mb-2">
-                <Search className="h-4 w-4 text-gray-500" />
+
+        {dropdownStates[type as keyof typeof dropdownStates] && (
+          <div className="absolute z-50 w-[300px] mt-2 bg-white border rounded-lg shadow-lg">
+            <div className="p-3">
+              <div className="flex items-center space-x-2 mb-3">
+                <Search className="h-4 w-4 text-gray-400" />
                 <Input
                   type="text"
                   placeholder="Pesquisar..."
-                  value={searchTerms[filterKey]}
+                  value={searchTerms[type]}
                   onChange={(e) => setSearchTerms(prev => ({
                     ...prev,
-                    [filterKey]: e.target.value
+                    [type]: e.target.value
                   }))}
                   className="h-8"
-                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
-              <div className="flex mb-2">
-                <button
-                  onClick={(e) => handleClearAll(filterKey, e)}
-                  className="text-xs text-green-800 hover:text-green-900"
-                >
-                  Limpar Seleção
-                </button>
+
+              <div className="mb-2">
+                <label className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={selected.length === options.length}
+                    onClick={() => handleSelectAll(type, options)}
+                  />
+                  <span className="text-sm">Selecionar Todos</span>
+                </label>
               </div>
-              <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                {filterOptionsBySearch(sortedOptions, searchTerms[filterKey]).map((option) => (
-                  <div
+
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {filteredItems.map((option) => (
+                  <label
                     key={option}
-                    className={`flex items-center justify-between p-1 hover:bg-gray-100 rounded cursor-pointer ${
-                      selected.includes(option) ? 'bg-green-50' : ''
-                    }`}
-                    onClick={(e) => handleMultiSelect(option, filterKey, e)}
+                    className={cn(
+                      "flex items-center space-x-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer",
+                      selected.includes(option) && "bg-blue-50"
+                    )}
                   >
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={selected.includes(option)}
-                        className="pointer-events-none"
-                      />
-                      <span className="text-sm font-medium">
-                        {option}
-                        {selected.includes(option) && (
-                          <span className="ml-1 text-green-800">✓</span>
-                        )}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      ({getOptionCount(option, filterKey)})
-                    </span>
-                  </div>
+                    <Checkbox
+                      checked={selected.includes(option)}
+                      onClick={() => handleMultiSelect(option, type)}
+                    />
+                    <span className="text-sm">{option}</span>
+                  </label>
                 ))}
               </div>
             </div>
@@ -300,30 +237,11 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow-sm border border-slate-200">
-      <div className="flex flex-wrap gap-4">
-        {renderFilterDropdown(
-          'Fábrica',
-          (filteredOptions?.fabrica || initialOptions?.fabrica || []),
-          'fabrica'
-        )}
-
-        {renderFilterDropdown(
-          'Cód Produto',
-          filteredOptions?.codigo || initialOptions?.codigo || [],
-          'codigo'
-        )}
-
-        {renderFilterDropdown(
-          'Família 1',
-          filteredOptions?.familia1 || initialOptions?.familia1 || [],
-          'familia1'
-        )}
-
-        {renderFilterDropdown(
-          'Família 2',
-          filteredOptions?.familia2 || initialOptions?.familia2 || [],
-          'familia2'
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {renderFilterDropdown('Fábrica', 'fabrica')}
+        {renderFilterDropdown('Código', 'codigo')}
+        {renderFilterDropdown('Família 1', 'familia1')}
+        {renderFilterDropdown('Família 2', 'familia2')}
       </div>
     </div>
   );
