@@ -5,6 +5,14 @@ import FilterComponent from '@/components/FilterComponent';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
+interface Produto {
+  produto: string;
+  marca: string;
+  fabrica: string;
+  familia1: string;
+  familia2: string;
+}
+
 const Index = () => {
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
@@ -26,12 +34,12 @@ const Index = () => {
       }
       
       console.log('Fetched produtos:', data);
-      return data;
+      return data as Produto[];
     }
   });
 
   const getFilteredProducts = (
-    allProducts: typeof produtos,
+    allProducts: Produto[] | null,
     marcas: string[],
     fabricas: string[],
     familia1: string[],
