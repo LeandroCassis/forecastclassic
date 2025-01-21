@@ -7,13 +7,11 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface ForecastTableProps {
   produto: string;
-  anoFiltro?: string[];
-  tipoFiltro?: string[];
 }
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoFiltro }) => {
+const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
   const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto);
   const { updateMutation } = useForecastMutations(productData?.id);
@@ -125,16 +123,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
     </div>
   );
 
-  const filteredGrupos = grupos.filter(grupo => {
-    if (anoFiltro && anoFiltro.length > 0 && !anoFiltro.includes(grupo.ano.toString())) {
-      return false;
-    }
-    if (tipoFiltro && tipoFiltro.length > 0 && !tipoFiltro.includes(grupo.tipo)) {
-      return false;
-    }
-    return true;
-  });
-
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
       <div className="overflow-x-auto">
@@ -155,7 +143,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto, anoFiltro, tipoF
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredGrupos.map((grupo) => (
+            {grupos.map((grupo) => (
               <ForecastTableRow
                 key={`${grupo.ano}-${grupo.id_tipo}`}
                 ano={grupo.ano}
