@@ -17,23 +17,81 @@ export default {
         "2xl": "1400px",
       },
     },
+    fontFamily: {
+      sans: ["Inter", "ui-sans-serif", "system-ui"],
+      // You can add more font families here, but ensure they align with the Spotify aesthetic.
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: "#121212", // Dark gray for background, very close to Spotify's
+        foreground: "#FFFFFF", // White for text
         table: {
-          header: "#1B4332", // Verde escuro para o cabeçalho
-          row: "#f8fafc",
-          altRow: "#f1f5f9",
-          border: "#e2e8f0"
+          header: "#212121", // Slightly darker gray for table headers
+          row: "#181818", // Darker gray for table rows
+          altRow: "#181818",// Darker gray for alternate table rows
+          border: "#333333" // Dark gray for borders
         },
+        // Spotify's primary green color. This could be adjusted based on your specific needs.
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#1DB954",
+          foreground: "#FFFFFF", // White for text
         },
+        secondary: {
+          DEFAULT: "#121212", // A very dark gray, almost black.
+          foreground: "#FFFFFF",
+        },
+        // Adjust these colors as needed based on your specific design choices.
+        // They should be chosen to create a good contrast with the dark theme.
+        destructive: {
+          DEFAULT: "#DA3333",
+          foreground: "#FFFFFF",
+        },
+        muted: {
+          DEFAULT: "#1E1E1E", // Darker gray for muted text or components
+          foreground: "#FFFFFF",
+        },
+        accent: {
+          DEFAULT: "#1DB954",
+          foreground: "#FFFFFF",
+        },
+        popover: {
+          DEFAULT: "#212121", // Darker gray for popovers
+          foreground: "#FFFFFF",
+        },
+        card: {
+          DEFAULT: "#121212", // Dark gray for cards
+          foreground: "#FFFFFF",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      // Keyframes and animations aligned with Spotify's aesthetic.
+      // The keyframes and animations are for elements like accordion.
+      // Spotify might use slightly different animation styles, so tweak these to match.
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config;
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
