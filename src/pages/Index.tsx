@@ -30,6 +30,39 @@ const Index = () => {
     }
   });
 
+  const getFilteredProducts = (
+    allProducts: typeof produtos,
+    marcas: string[],
+    fabricas: string[],
+    familia1: string[],
+    familia2: string[],
+    produtos: string[]
+  ) => {
+    if (!allProducts) return [];
+    
+    return allProducts.filter(produto => {
+      const matchesMarca = marcas.length === 0 || marcas.includes(produto.marca);
+      const matchesFabrica = fabricas.length === 0 || fabricas.includes(produto.fabrica);
+      const matchesFamilia1 = familia1.length === 0 || familia1.includes(produto.familia1);
+      const matchesFamilia2 = familia2.length === 0 || familia2.includes(produto.familia2);
+      const matchesProduto = produtos.length === 0 || produtos.includes(produto.produto);
+
+      return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
+    });
+  };
+
+  const filteredProdutos = useMemo(() => {
+    return getFilteredProducts(
+      produtos,
+      selectedMarcas,
+      selectedFabricas,
+      selectedFamilia1,
+      selectedFamilia2,
+      selectedProdutos
+    );
+  }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
+
+  // Calculate available options for each filter based on other selections
   const filters = useMemo(() => {
     if (!produtos) return {
       marcas: [],
@@ -39,27 +72,20 @@ const Index = () => {
       produtos: []
     };
 
+    // Filter products based on current selections
+    const filteredForMarcas = getFilteredProducts(produtos, [], selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos);
+    const filteredForFabricas = getFilteredProducts(produtos, selectedMarcas, [], selectedFamilia1, selectedFamilia2, selectedProdutos);
+    const filteredForFamilia1 = getFilteredProducts(produtos, selectedMarcas, selectedFabricas, [], selectedFamilia2, selectedProdutos);
+    const filteredForFamilia2 = getFilteredProducts(produtos, selectedMarcas, selectedFabricas, selectedFamilia1, [], selectedProdutos);
+    const filteredForProdutos = getFilteredProducts(produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, []);
+
     return {
-      marcas: [...new Set(produtos.map(p => p.marca))],
-      fabricas: [...new Set(produtos.map(p => p.fabrica))],
-      familia1: [...new Set(produtos.map(p => p.familia1))],
-      familia2: [...new Set(produtos.map(p => p.familia2))],
-      produtos: [...new Set(produtos.map(p => p.produto))]
+      marcas: [...new Set(filteredForMarcas.map(p => p.marca))],
+      fabricas: [...new Set(filteredForFabricas.map(p => p.fabrica))],
+      familia1: [...new Set(filteredForFamilia1.map(p => p.familia1))],
+      familia2: [...new Set(filteredForFamilia2.map(p => p.familia2))],
+      produtos: [...new Set(filteredForProdutos.map(p => p.produto))]
     };
-  }, [produtos]);
-
-  const filteredProdutos = useMemo(() => {
-    if (!produtos) return [];
-    
-    return produtos.filter(produto => {
-      const matchesMarca = selectedMarcas.length === 0 || selectedMarcas.includes(produto.marca);
-      const matchesFabrica = selectedFabricas.length === 0 || selectedFabricas.includes(produto.fabrica);
-      const matchesFamilia1 = selectedFamilia1.length === 0 || selectedFamilia1.includes(produto.familia1);
-      const matchesFamilia2 = selectedFamilia2.length === 0 || selectedFamilia2.includes(produto.familia2);
-      const matchesProduto = selectedProdutos.length === 0 || selectedProdutos.includes(produto.produto);
-
-      return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
-    });
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
   if (isLoading) {
