@@ -53,7 +53,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
       <DropdownMenuTrigger asChild>
         <Button 
           variant="outline" 
-          className="h-10 px-3 flex items-center justify-between min-w-[200px] bg-white"
+          className="h-10 px-3 flex items-center justify-between min-w-[200px] bg-white text-[1.15rem]"
         >
           <span className="truncate">
             {selectedCount > 0
@@ -73,7 +73,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
               placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8"
+              className="h-8 text-[1.15rem]"
             />
           </div>
           <div className="px-2 pb-2 border-b">
@@ -85,7 +85,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
               />
               <label
                 htmlFor={`${label}-select-all`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-[1.15rem] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Selecionar Todos
               </label>
@@ -102,7 +102,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
                   />
                   <label
                     htmlFor={`${label}-${option}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-[1.15rem] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {option}
                   </label>
