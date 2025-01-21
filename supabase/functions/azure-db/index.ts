@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import * as mssql from 'https://deno.land/x/mssql@v3.0.1/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,42 +15,34 @@ serve(async (req) => {
   try {
     const { action } = await req.json()
     
-    // Configure SQL connection
-    const config = {
-      server: 'vesperttine-server.database.windows.net',
-      database: 'VESPERTTINE',
-      user: 'vesperttine',
-      password: '840722aA',
-      options: {
-        encrypt: true,
-        trustServerCertificate: false
-      }
-    }
+    // Configure SQL connection string
+    const connectionString = "Server=tcp:vesperttine-server.database.windows.net,1433;Initial Catalog=VESPERTTINE;Persist Security Info=False;User ID=vesperttine;Password=840722aA;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
-    // Connect to database
-    console.log('Connecting to Azure SQL Database...')
-    await mssql.connect(config)
-    
-    let result
-    
-    switch (action) {
-      case 'getProdutos':
-        console.log('Executing getProdutos query...')
-        result = await mssql.query`
+    // Make the request to Azure SQL using native fetch
+    const response = await fetch('https://your-azure-function-url/api/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        connectionString,
+        query: `
           SELECT produto, marca, fabrica, familia1, familia2 
           FROM produtos 
           ORDER BY produto
         `
-        break
-      default:
-        throw new Error('Invalid action')
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    console.log('Query executed successfully')
-    await mssql.close()
+    const data = await response.json();
+    console.log('Query executed successfully:', data);
 
     return new Response(
-      JSON.stringify({ data: result.recordset }),
+      JSON.stringify({ data: data.recordset }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -59,7 +50,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
