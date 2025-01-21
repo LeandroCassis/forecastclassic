@@ -38,7 +38,7 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
       return options;
     },
     staleTime: Infinity,
-    gcTime: Infinity
+    gcTime: Infinity // Changed from cacheTime to gcTime
   });
 
   const convertToOptions = (values: string[]): Option[] => {
