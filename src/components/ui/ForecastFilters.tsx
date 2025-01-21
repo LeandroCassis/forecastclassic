@@ -48,15 +48,13 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
         familia2: [...new Set(data.map(item => item.familia2))].filter(Boolean)
       };
 
-      // Inicializa as opções filtradas com os valores iniciais
       setFilteredOptions(options);
       return options;
     },
-    staleTime: Infinity, // Mantém os dados em cache indefinidamente
-    cacheTime: Infinity
+    staleTime: Infinity,
+    gcTime: Infinity // Changed from cacheTime to gcTime
   });
 
-  // Substitua a query de filteredOptions por um estado local
   const [filteredOptions, setFilteredOptions] = useState<{
     codigo: string[];
     fabrica: string[];
@@ -64,7 +62,6 @@ const ForecastFilters: React.FC<ForecastFiltersProps> = ({ onFilterChange }) => 
     familia2: string[];
   } | null>(null);
 
-  // Atualize o useEffect para gerenciar as opções filtradas
   useEffect(() => {
     if (!initialOptions) return;
 
