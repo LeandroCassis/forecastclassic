@@ -72,7 +72,7 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
           </div>
         </div>
         <div>
-          <div className="text-slate-500">DATA ATUALIZAÇÃO FOB</div>
+          <div className="text-slate-500">ATUALIZAÇÃO FOB</div>
           <div className="font-medium">
             {productData.data_atualizacao_fob ? format(new Date(productData.data_atualizacao_fob), 'dd/MM/yyyy') : '-'}
           </div>
