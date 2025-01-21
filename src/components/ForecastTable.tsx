@@ -128,7 +128,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-700">
+            <TableRow className="bg-gradient-to-r from-green-600 to-blue-700 hover:from-blue-600 hover:to-blue-700">
               <TableHead className="text-white font-medium w-[100px] min-w-[100px] text-left py-3 border-r border-blue-500/30">ANO</TableHead>
               <TableHead className="text-white font-medium w-[120px] min-w-[120px] text-left py-3 border-r border-blue-500/30">TIPO</TableHead>
               {months.map(month => (
