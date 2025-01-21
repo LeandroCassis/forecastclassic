@@ -45,8 +45,8 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
   if (!productData) return null;
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl border border-b-0 border-slate-200 p-4 space-y-2">
-      <div className="grid grid-cols-7 gap-4 text-sm">
+    <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl border border-b-0 border-slate-200 p-3 space-y-1">
+      <div className="grid grid-cols-7 gap-3 text-[1.15rem]">
         <div>
           <div className="text-slate-500">COD PRODUTO</div>
           <div className="font-medium">{productData.codigo || '-'}</div>
