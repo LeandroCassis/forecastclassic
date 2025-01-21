@@ -26,6 +26,19 @@ interface Filters {
   ano: string[];
 }
 
+const getFilteredProducts = (produtos: Produto[] | null, filters: Filters) => {
+  if (!produtos) return [];
+  
+  return produtos.filter(produto => {
+    if (filters.marca.length > 0 && !filters.marca.includes(produto.marca)) return false;
+    if (filters.fabrica.length > 0 && !filters.fabrica.includes(produto.fabrica)) return false;
+    if (filters.familia1.length > 0 && !filters.familia1.includes(produto.familia1)) return false;
+    if (filters.familia2.length > 0 && !filters.familia2.includes(produto.familia2)) return false;
+    if (filters.produto.length > 0 && !filters.produto.includes(produto.produto)) return false;
+    return true;
+  });
+};
+
 const IndexContent = () => {
   const [filters, setFilters] = useState<Filters>({
     empresa: [],
@@ -58,7 +71,7 @@ const IndexContent = () => {
     }
   });
 
-  const handleFilterChange = (filterType: string, values: string[]) => {
+  const handleFilterChange = (filterType: keyof Filters, values: string[]) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: values
@@ -70,12 +83,7 @@ const IndexContent = () => {
     setShowFilters(!showFilters);
   };
 
-  const shouldShowProduct = (produto: string) => {
-    if (filters.produto.length > 0 && !filters.produto.includes(produto)) {
-      return false;
-    }
-    return true;
-  };
+  const filteredProducts = getFilteredProducts(produtos, filters);
 
   if (isLoading) {
     return (
@@ -125,39 +133,19 @@ const IndexContent = () => {
         {showFilters && <ForecastFilters onFilterChange={handleFilterChange} />}
         
         <div className="space-y-8">
-          {filters.produto.length > 0 ? (
-            <>
-              {filters.produto.map(produto => (
-                <div 
-                  key={produto} 
-                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
-                >
-                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
-                  <ForecastTable 
-                    produto={produto} 
-                    anoFiltro={filters.ano}
-                    tipoFiltro={filters.tipo}
-                  />
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              {produtos?.map(produto => shouldShowProduct(produto) && (
-                <div 
-                  key={produto} 
-                  className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
-                >
-                  <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto}</h2>
-                  <ForecastTable 
-                    produto={produto} 
-                    anoFiltro={filters.ano}
-                    tipoFiltro={filters.tipo}
-                  />
-                </div>
-              ))}
-            </>
-          )}
+          {filteredProducts.map(produto => (
+            <div 
+              key={produto.produto}
+              className="bg-white/80 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-blue-100/50 transition-all duration-300 hover:shadow-xl"
+            >
+              <h2 className="text-2xl font-semibold text-blue-900 mb-6">{produto.produto}</h2>
+              <ForecastTable 
+                produto={produto.produto}
+                anoFiltro={filters.ano}
+                tipoFiltro={filters.tipo}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
