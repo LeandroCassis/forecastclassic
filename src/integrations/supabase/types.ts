@@ -123,6 +123,7 @@ export type Database = {
           created_at: string | null
           data_atualizacao_fob: string | null
           empresa: string
+          estoque: number | null
           fabrica: string
           familia1: string
           familia2: string
@@ -130,6 +131,7 @@ export type Database = {
           id: string
           indice: number | null
           marca: string
+          moedafob: string | null
           preco_venda: number | null
           produto: string
           updated_at: string | null
@@ -139,6 +141,7 @@ export type Database = {
           created_at?: string | null
           data_atualizacao_fob?: string | null
           empresa: string
+          estoque?: number | null
           fabrica: string
           familia1: string
           familia2: string
@@ -146,6 +149,7 @@ export type Database = {
           id?: string
           indice?: number | null
           marca: string
+          moedafob?: string | null
           preco_venda?: number | null
           produto: string
           updated_at?: string | null
@@ -155,6 +159,7 @@ export type Database = {
           created_at?: string | null
           data_atualizacao_fob?: string | null
           empresa?: string
+          estoque?: number | null
           fabrica?: string
           familia1?: string
           familia2?: string
@@ -162,6 +167,7 @@ export type Database = {
           id?: string
           indice?: number | null
           marca?: string
+          moedafob?: string | null
           preco_venda?: number | null
           produto?: string
           updated_at?: string | null

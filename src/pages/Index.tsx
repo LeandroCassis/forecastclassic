@@ -4,8 +4,16 @@ import ForecastTable from '@/components/ForecastTable';
 import ForecastFilters from '@/components/ForecastFilters';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Produto {
+  produto: string;
+  marca: string;
+  fabrica: string;
+  familia1: string;
+  familia2: string;
+}
 
 interface Filters {
   empresa: string[];
@@ -17,8 +25,6 @@ interface Filters {
   tipo: string[];
   ano: string[];
 }
-
-const queryClient = new QueryClient();
 
 const IndexContent = () => {
   const [filters, setFilters] = useState<Filters>({
@@ -37,11 +43,10 @@ const IndexContent = () => {
   const { data: produtos, isLoading } = useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
-      console.log('Fetching produtos from Supabase...');
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('produto')
-        .order('produto');
+      console.log('Fetching produtos from Azure...');
+      const { data, error } = await supabase.functions.invoke('azure-db', {
+        body: { action: 'getProdutos' }
+      });
       
       if (error) {
         console.error('Error fetching produtos:', error);
@@ -49,7 +54,7 @@ const IndexContent = () => {
       }
       
       console.log('Fetched produtos:', data);
-      return data.map(p => p.produto);
+      return data as Produto[];
     }
   });
 
@@ -161,7 +166,7 @@ const IndexContent = () => {
 
 const Index = () => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={new QueryClient()}>
       <IndexContent />
     </QueryClientProvider>
   );
