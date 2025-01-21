@@ -25,10 +25,10 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         table: {
-          header: "hsl(var(--table-header))",
-          row: "hsl(var(--table-row))",
-          altRow: "hsl(var(--table-alt-row))",
-          border: "hsl(var(--table-border))"
+          header: "#1B4332", // Verde escuro para o cabeçalho
+          row: "#f8fafc",
+          altRow: "#f1f5f9",
+          border: "#e2e8f0"
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",

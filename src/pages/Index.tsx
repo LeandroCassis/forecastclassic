@@ -70,6 +70,7 @@ const Index = () => {
     );
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
+  // Calculate available options for each filter based on other selections
   const filters = useMemo(() => {
     if (!produtos) return {
       marcas: [],
@@ -79,6 +80,7 @@ const Index = () => {
       produtos: []
     };
 
+    // Filter products based on current selections
     const filteredForMarcas = getFilteredProducts(produtos, [], selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos);
     const filteredForFabricas = getFilteredProducts(produtos, selectedMarcas, [], selectedFamilia1, selectedFamilia2, selectedProdutos);
     const filteredForFamilia1 = getFilteredProducts(produtos, selectedMarcas, selectedFabricas, [], selectedFamilia2, selectedProdutos);
@@ -96,10 +98,10 @@ const Index = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-[95%] mx-auto py-8">
           <div className="flex items-center justify-center h-40">
-            <div className="text-primary">Carregando produtos...</div>
+            <div className="text-blue-600">Carregando produtos...</div>
           </div>
         </div>
       </div>
@@ -107,14 +109,14 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-[95%] mx-auto py-8">
-        <div className="bg-card/50 backdrop-blur-lg rounded-2xl shadow-lg border border-border p-8 mb-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-8 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-primary mb-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Forecast e Vendas
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-slate-500 mt-2">
               Visualização e edição de previsões de vendas
             </p>
           </div>
@@ -156,7 +158,7 @@ const Index = () => {
         <div className="space-y-8">
           {filteredProdutos.map(produto => (
             <div key={produto.produto} className="space-y-0 animate-fade-in">
-              <h2 className="text-2xl font-semibold text-primary mb-4">{produto.produto}</h2>
+              <h2 className="text-2xl font-semibold text-blue-900 mb-4">{produto.produto}</h2>
               <ProductHeader produto={produto.produto} />
               <ForecastTable produto={produto.produto} />
             </div>
