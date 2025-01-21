@@ -78,7 +78,7 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
           </div>
         </div>
         <div>
-          <div className="text-slate-500">ESTOQUE</div>
+          <div className="text-slate-500">ESTOQUE ATUAL</div>
           <div className="font-medium">
             {productData.estoque ? productData.estoque.toLocaleString('pt-BR') : '-'}
           </div>
