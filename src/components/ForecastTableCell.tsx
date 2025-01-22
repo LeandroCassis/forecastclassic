@@ -8,6 +8,7 @@ interface ForecastTableCellProps {
   value: number;
   onChange?: (value: string) => void;
   onBlur?: () => void;
+  bgColor?: string;
 }
 
 export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
@@ -16,14 +17,15 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
   shouldBeYellow,
   value,
   onChange,
-  onBlur
+  onBlur,
+  bgColor = 'bg-white'
 }) => {
   const displayValue = value === 0 ? "-" : value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   return (
     <TableCell 
       className={`text-right p-0 border-r border-slate-200 w-[100px] min-w-[100px] text-[1.15rem]
-        ${shouldBeYellow ? 'bg-yellow-50' : 'bg-white'}
+        ${shouldBeYellow ? 'bg-yellow-50' : bgColor}
         ${isEditable && !isRealized ? 'bg-blue-50' : ''}
       `}
     >
