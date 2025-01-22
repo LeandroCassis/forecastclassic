@@ -31,7 +31,7 @@ export const ForecastTableRow: React.FC<ForecastTableRowProps> = ({
   const isEditable = tipo === 'REVISÃO';
   const total = calculateTotal(ano, id_tipo);
   const displayTotal = total === 0 ? "-" : total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const bgColor = ano % 2 === 1 ? 'bg-[#F2F2F2]' : 'bg-[#E0E0E0]';
+  const bgColor = ano % 2 === 1 ? 'bg-[#F2F2F2]' : 'bg-[#ECECEC]';
 
   return (
     <TableRow className={`hover:bg-slate-50 transition-colors ${bgColor}`}>
