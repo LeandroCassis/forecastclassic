@@ -35,8 +35,8 @@ export const ForecastTableRow: React.FC<ForecastTableRowProps> = ({
 
   return (
     <TableRow className={`hover:bg-slate-50 transition-colors ${bgColor}`}>
-      <TableCell className={`font-medium text-left py-2 border-r border-slate-200 text-[1.15rem] ${bgColor}`}>{ano}</TableCell>
-      <TableCell className={`text-left py-2 border-r border-slate-200 text-[1.15rem] ${bgColor}`}>{tipo}</TableCell>
+      <TableCell className={`font-medium text-left py-2 border-r border-slate-200 text-[1.15rem] text-black ${bgColor}`}>{ano}</TableCell>
+      <TableCell className={`text-left py-2 border-r border-slate-200 text-[1.15rem] text-black ${bgColor}`}>{tipo}</TableCell>
       {months.map(month => {
         const isRealized = yearConfig[month]?.realizado;
         const shouldBeYellow = isRealized && tipo === 'REVISÃO';
@@ -59,10 +59,10 @@ export const ForecastTableRow: React.FC<ForecastTableRowProps> = ({
             type="number"
             value={total}
             onChange={(e) => handleTotalChange(ano, tipo, id_tipo, e.target.value)}
-            className={`w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium text-[1.15rem]`}
+            className={`w-full h-full py-2 text-right bg-blue-50 border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 font-medium text-[1.15rem] text-black`}
           />
         ) : (
-          <div className="py-2 px-3 font-medium text-[1.15rem]">
+          <div className="py-2 px-3 font-medium text-[1.15rem] text-black">
             {displayTotal}
           </div>
         )}
