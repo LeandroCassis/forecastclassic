@@ -24,7 +24,7 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
 
   return (
     <TableCell 
-      className={`text-right p-0 border-r border-slate-200 w-[100px] min-w-[100px] text-[1.15rem]
+      className={`text-right p-0 border-r border-slate-200 w-[100px] min-w-[100px] text-[1.15rem] text-black
         ${shouldBeYellow ? 'bg-yellow-50' : bgColor}
         ${isEditable && !isRealized ? 'bg-blue-50' : ''}
       `}
@@ -35,10 +35,10 @@ export const ForecastTableCell: React.FC<ForecastTableCellProps> = ({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           onBlur={onBlur}
-          className="w-full h-8 py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 transition-all text-[1.15rem]"
+          className="w-full h-8 py-1 text-right bg-transparent border-0 focus:ring-2 focus:ring-blue-400 focus:outline-none px-3 transition-all text-[1.15rem] text-black"
         />
       ) : (
-        <div className="py-1 px-3">
+        <div className="py-1 px-3 text-black">
           {displayValue}
         </div>
       )}

@@ -111,7 +111,7 @@ const Index = () => {
       <div className="max-w-[95%] mx-auto py-6">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl uppercase text-black">
               S&OP Grupo Classic
             </h1>
             <p className="text-slate-500 mt-2 text-[1.15rem]">

@@ -55,7 +55,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
           variant="outline" 
           className="h-10 px-3 flex items-center justify-between min-w-[200px] bg-white text-[1.15rem]"
         >
-          <span className="truncate">
+          <span className="truncate uppercase">
             {selectedCount > 0
               ? `${label} (${selectedCount})`
               : label}
@@ -85,7 +85,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
               />
               <label
                 htmlFor={`${label}-select-all`}
-                className="text-[1.15rem] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-[1.15rem] leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Selecionar Todos
               </label>
@@ -102,7 +102,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
                   />
                   <label
                     htmlFor={`${label}-${option}`}
-                    className="text-[1.15rem] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-[1.15rem] leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {option}
                   </label>
