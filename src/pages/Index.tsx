@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
@@ -6,7 +5,6 @@ import FilterComponent from '@/components/FilterComponent';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-
 interface Produto {
   produto: string;
   marca: string;
@@ -14,7 +12,6 @@ interface Produto {
   familia1: string;
   familia2: string;
 }
-
 const ITEMS_PER_PAGE = 5; // Number of products to display per page
 
 const Index = () => {
@@ -24,7 +21,6 @@ const Index = () => {
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-
   const {
     data: produtos,
     isLoading
@@ -36,10 +32,7 @@ const Index = () => {
       const {
         data,
         error
-      } = await supabase
-        .from('produtos')
-        .select('produto, marca, fabrica, familia1, familia2');
-      
+      } = await supabase.from('produtos').select('produto, marca, fabrica, familia1, familia2');
       if (error) {
         console.error('Error fetching produtos:', error);
         throw error;
@@ -48,7 +41,6 @@ const Index = () => {
       return data as Produto[];
     }
   });
-
   const getFilteredProducts = (allProducts: Produto[] | null, marcas: string[], fabricas: string[], familia1: string[], familia2: string[], produtos: string[]) => {
     if (!allProducts) return [];
     return allProducts.filter(produto => {
@@ -60,7 +52,6 @@ const Index = () => {
       return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
     });
   };
-
   const filteredProdutos = useMemo(() => {
     return getFilteredProducts(produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos);
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
@@ -71,7 +62,6 @@ const Index = () => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredProdutos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProdutos, currentPage]);
-
   const filters = useMemo(() => {
     if (!produtos) return {
       marcas: [],
@@ -104,82 +94,60 @@ const Index = () => {
   // Display pagination controls
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-    
     const pageItems = [];
     const maxDisplayedPages = 5;
-    
+
     // Calculate range of pages to display
     let startPage = Math.max(1, currentPage - Math.floor(maxDisplayedPages / 2));
     let endPage = Math.min(totalPages, startPage + maxDisplayedPages - 1);
-    
+
     // Adjust startPage if we're near the end
     if (endPage - startPage + 1 < maxDisplayedPages) {
       startPage = Math.max(1, endPage - maxDisplayedPages + 1);
     }
-    
+
     // Add page links
     for (let i = startPage; i <= endPage; i++) {
-      pageItems.push(
-        <PaginationItem key={i}>
-          <PaginationLink 
-            onClick={() => handlePageChange(i)} 
-            isActive={currentPage === i}
-          >
+      pageItems.push(<PaginationItem key={i}>
+          <PaginationLink onClick={() => handlePageChange(i)} isActive={currentPage === i}>
             {i}
           </PaginationLink>
-        </PaginationItem>
-      );
+        </PaginationItem>);
     }
-    
-    return (
-      <Pagination className="mt-4">
+    return <Pagination className="mt-4">
         <PaginationContent>
-          {currentPage > 1 && (
-            <PaginationItem>
+          {currentPage > 1 && <PaginationItem>
               <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} />
-            </PaginationItem>
-          )}
+            </PaginationItem>}
           
-          {startPage > 1 && (
-            <>
+          {startPage > 1 && <>
               <PaginationItem>
                 <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
               </PaginationItem>
-              {startPage > 2 && (
-                <PaginationItem>
+              {startPage > 2 && <PaginationItem>
                   <span className="px-2">...</span>
-                </PaginationItem>
-              )}
-            </>
-          )}
+                </PaginationItem>}
+            </>}
           
           {pageItems}
           
-          {endPage < totalPages && (
-            <>
-              {endPage < totalPages - 1 && (
-                <PaginationItem>
+          {endPage < totalPages && <>
+              {endPage < totalPages - 1 && <PaginationItem>
                   <span className="px-2">...</span>
-                </PaginationItem>
-              )}
+                </PaginationItem>}
               <PaginationItem>
                 <PaginationLink onClick={() => handlePageChange(totalPages)}>
                   {totalPages}
                 </PaginationLink>
               </PaginationItem>
-            </>
-          )}
+            </>}
           
-          {currentPage < totalPages && (
-            <PaginationItem>
+          {currentPage < totalPages && <PaginationItem>
               <PaginationNext onClick={() => handlePageChange(currentPage + 1)} />
-            </PaginationItem>
-          )}
+            </PaginationItem>}
         </PaginationContent>
-      </Pagination>
-    );
+      </Pagination>;
   };
-
   if (isLoading) {
     return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-[95%] mx-auto py-6">
@@ -189,10 +157,9 @@ const Index = () => {
         </div>
       </div>;
   }
-
   return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-[95%] mx-auto py-6">
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4 py-[3px]">
           <div>
             <h1 className="text-4xl uppercase text-black">
               S&OP GRUPO CLASSIC
@@ -216,18 +183,15 @@ const Index = () => {
         </div>
         
         <div className="space-y-4">
-          {paginatedProdutos.map(produto => (
-            <div key={produto.produto} className="space-y-0 animate-fade-in">
+          {paginatedProdutos.map(produto => <div key={produto.produto} className="space-y-0 animate-fade-in">
               <h2 className="text-2xl font-semibold text-blue-900 mb-2">{produto.produto}</h2>
               <ProductHeader produto={produto.produto} />
               <ForecastTable produto={produto.produto} />
-            </div>
-          ))}
+            </div>)}
         </div>
         
         {renderPagination()}
       </div>
     </div>;
 };
-
 export default Index;
