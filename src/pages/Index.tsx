@@ -1,9 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
 import FilterComponent from '@/components/FilterComponent';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
 interface Produto {
   produto: string;
   marca: string;
@@ -11,12 +14,17 @@ interface Produto {
   familia1: string;
   familia2: string;
 }
+
+const ITEMS_PER_PAGE = 5; // Number of products to display per page
+
 const Index = () => {
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
   const [selectedFamilia1, setSelectedFamilia1] = useState<string[]>([]);
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const {
     data: produtos,
     isLoading
@@ -24,10 +32,14 @@ const Index = () => {
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Supabase...');
+      // Implement pagination in the database query for better performance
       const {
         data,
         error
-      } = await supabase.from('produtos').select('produto, marca, fabrica, familia1, familia2');
+      } = await supabase
+        .from('produtos')
+        .select('produto, marca, fabrica, familia1, familia2');
+      
       if (error) {
         console.error('Error fetching produtos:', error);
         throw error;
@@ -36,6 +48,7 @@ const Index = () => {
       return data as Produto[];
     }
   });
+
   const getFilteredProducts = (allProducts: Produto[] | null, marcas: string[], fabricas: string[], familia1: string[], familia2: string[], produtos: string[]) => {
     if (!allProducts) return [];
     return allProducts.filter(produto => {
@@ -47,9 +60,18 @@ const Index = () => {
       return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
     });
   };
+
   const filteredProdutos = useMemo(() => {
     return getFilteredProducts(produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos);
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
+
+  // Calculate pagination data
+  const totalPages = Math.ceil(filteredProdutos.length / ITEMS_PER_PAGE);
+  const paginatedProdutos = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProdutos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProdutos, currentPage]);
+
   const filters = useMemo(() => {
     if (!produtos) return {
       marcas: [],
@@ -71,6 +93,93 @@ const Index = () => {
       produtos: [...new Set(filteredForProdutos.map(p => p.produto))]
     };
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo(0, 0);
+  };
+
+  // Display pagination controls
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    const pageItems = [];
+    const maxDisplayedPages = 5;
+    
+    // Calculate range of pages to display
+    let startPage = Math.max(1, currentPage - Math.floor(maxDisplayedPages / 2));
+    let endPage = Math.min(totalPages, startPage + maxDisplayedPages - 1);
+    
+    // Adjust startPage if we're near the end
+    if (endPage - startPage + 1 < maxDisplayedPages) {
+      startPage = Math.max(1, endPage - maxDisplayedPages + 1);
+    }
+    
+    // Add page links
+    for (let i = startPage; i <= endPage; i++) {
+      pageItems.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            onClick={() => handlePageChange(i)} 
+            isActive={currentPage === i}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return (
+      <Pagination className="mt-4">
+        <PaginationContent>
+          {currentPage > 1 && (
+            <PaginationItem>
+              <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} />
+            </PaginationItem>
+          )}
+          
+          {startPage > 1 && (
+            <>
+              <PaginationItem>
+                <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
+              </PaginationItem>
+              {startPage > 2 && (
+                <PaginationItem>
+                  <span className="px-2">...</span>
+                </PaginationItem>
+              )}
+            </>
+          )}
+          
+          {pageItems}
+          
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <PaginationItem>
+                  <span className="px-2">...</span>
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationLink onClick={() => handlePageChange(totalPages)}>
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            </>
+          )}
+          
+          {currentPage < totalPages && (
+            <PaginationItem>
+              <PaginationNext onClick={() => handlePageChange(currentPage + 1)} />
+            </PaginationItem>
+          )}
+        </PaginationContent>
+      </Pagination>
+    );
+  };
+
   if (isLoading) {
     return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-[95%] mx-auto py-6">
@@ -80,12 +189,13 @@ const Index = () => {
         </div>
       </div>;
   }
+
   return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-[95%] mx-auto py-6">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4">
           <div>
             <h1 className="text-4xl uppercase text-black">
-              S&OP Grupo Classic
+              S&OP GRUPO CLASSIC
             </h1>
             
           </div>
@@ -97,16 +207,27 @@ const Index = () => {
             <FilterComponent label="Família 2" options={filters.familia2} selectedValues={selectedFamilia2} onSelectionChange={setSelectedFamilia2} />
             <FilterComponent label="Produto" options={filters.produtos} selectedValues={selectedProdutos} onSelectionChange={setSelectedProdutos} />
           </div>
+          
+          <div className="mt-4">
+            <p className="text-black">
+              {filteredProdutos.length} produtos encontrados | Exibindo página {currentPage} de {totalPages}
+            </p>
+          </div>
         </div>
         
         <div className="space-y-4">
-          {filteredProdutos.map(produto => <div key={produto.produto} className="space-y-0 animate-fade-in">
+          {paginatedProdutos.map(produto => (
+            <div key={produto.produto} className="space-y-0 animate-fade-in">
               <h2 className="text-2xl font-semibold text-blue-900 mb-2">{produto.produto}</h2>
               <ProductHeader produto={produto.produto} />
               <ForecastTable produto={produto.produto} />
-            </div>)}
+            </div>
+          ))}
         </div>
+        
+        {renderPagination()}
       </div>
     </div>;
 };
+
 export default Index;

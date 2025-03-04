@@ -1,8 +1,9 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 
 export const useForecastData = (produto: string) => {
-  // Product data query
+  // Product data query with proper caching
   const { data: productData, isError: productError } = useQuery({
     queryKey: ['product', produto],
     queryFn: async () => {
@@ -25,10 +26,11 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
     retry: 3
   });
 
-  // Grupos query
+  // Grupos query with longer cache time since this rarely changes
   const { data: grupos, isError: gruposError } = useQuery({
     queryKey: ['grupos'],
     queryFn: async () => {
@@ -51,10 +53,11 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 3
   });
 
-  // Month configurations query
+  // Month configurations query with longer cache
   const { data: monthConfigurations, isError: configError } = useQuery({
     queryKey: ['month_configurations'],
     queryFn: async () => {
@@ -90,10 +93,11 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
     retry: 3
   });
 
-  // Forecast values query
+  // Forecast values query specific to the product
   const { data: forecastValues, isError: forecastError } = useQuery({
     queryKey: ['forecast_values', productData?.id],
     queryFn: async () => {
@@ -132,6 +136,7 @@ export const useForecastData = (produto: string) => {
       }
     },
     enabled: !!productData?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
     retry: 3
   });
 
