@@ -87,7 +87,7 @@ const Index = () => {
             <h1 className="text-4xl uppercase text-black">
               S&OP Grupo Classic
             </h1>
-            <p className="text-slate-500 mt-2 text-[1.15rem]">Planejamento </p>
+            
           </div>
           
           <div className="mt-6 grid grid-cols-5 gap-3">
