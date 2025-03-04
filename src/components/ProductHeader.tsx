@@ -2,22 +2,22 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
-
 interface ProductHeaderProps {
   produto: string;
 }
-
-const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
-  const { data: productData } = useQuery({
+const ProductHeader: React.FC<ProductHeaderProps> = ({
+  produto
+}) => {
+  const {
+    data: productData
+  } = useQuery({
     queryKey: ['product-details', produto],
     queryFn: async () => {
       console.log('Fetching product details for:', produto);
-      const { data, error } = await supabase
-        .from('produtos')
-        .select('codigo, fob, moedafob, fabrica, preco_venda, data_atualizacao_fob, estoque, marca')
-        .eq('produto', produto)
-        .maybeSingle();
-
+      const {
+        data,
+        error
+      } = await supabase.from('produtos').select('codigo, fob, moedafob, fabrica, preco_venda, data_atualizacao_fob, estoque, marca').eq('produto', produto).maybeSingle();
       if (error) {
         console.error('Error fetching product details:', error);
         throw error;
@@ -26,12 +26,9 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
       return data;
     }
   });
-
   const formatFob = (value: number | null, currency: string | null) => {
     if (!value) return '-';
-    
     const formattedNumber = Math.floor(value).toLocaleString('en-US');
-    
     switch (currency?.toUpperCase()) {
       case 'USD':
         return `USD ${formattedNumber}`;
@@ -41,11 +38,8 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
         return `${formattedNumber}`;
     }
   };
-
   if (!productData) return null;
-
-  return (
-    <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl border border-b-0 border-slate-200 p-3 space-y-1">
+  return <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl border border-b-0 border-slate-200 p-3 space-y-1 py-[2px]">
       <div className="grid grid-cols-7 gap-3 text-[1.15rem]">
         <div>
           <div className="text-black">COD PRODUTO</div>
@@ -68,7 +62,10 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
         <div>
           <div className="text-black">PREÇO VENDA</div>
           <div className="font-medium text-black">
-            {productData.preco_venda ? productData.preco_venda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}
+            {productData.preco_venda ? productData.preco_venda.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          }) : '-'}
           </div>
         </div>
         <div>
@@ -84,8 +81,6 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({ produto }) => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ProductHeader;
