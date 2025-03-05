@@ -1,3 +1,4 @@
+
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
@@ -12,7 +13,7 @@ app.use(express.json());
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'FORECAST',
+    database: 'VESPERTTINE',
     user: 'vesperttine',
     password: '840722aA',
     options: {

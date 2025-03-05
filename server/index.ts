@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import { query } from '../src/integrations/azure/client.js';
