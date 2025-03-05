@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 
 const API_URL = 'http://localhost:3001/api';
@@ -17,7 +18,7 @@ export const useForecastData = (produto: string) => {
       }
     },
     staleTime: Infinity, // Data won't become stale
-    cacheTime: Infinity, // Keep in cache indefinitely
+    gcTime: Infinity, // Keep in cache indefinitely
     retry: 1
   });
 
@@ -35,7 +36,7 @@ export const useForecastData = (produto: string) => {
       }
     },
     staleTime: Infinity,
-    cacheTime: Infinity,
+    gcTime: Infinity,
     retry: 1
   });
 
@@ -67,7 +68,7 @@ export const useForecastData = (produto: string) => {
       }
     },
     staleTime: Infinity,
-    cacheTime: Infinity,
+    gcTime: Infinity,
     retry: 1
   });
 
@@ -99,7 +100,7 @@ export const useForecastData = (produto: string) => {
     },
     enabled: !!productData?.codigo,
     staleTime: Infinity,
-    cacheTime: Infinity,
+    gcTime: Infinity,
     retry: 1
   });
 

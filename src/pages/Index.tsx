@@ -60,18 +60,16 @@ const Index = () => {
       return data as Produto[];
     },
     staleTime: Infinity, // Mantenha os dados em cache indefinidamente
-    cacheTime: 1000 * 60 * 30, // Cache por 30 minutos
+    gcTime: 1000 * 60 * 30, // Cache por 30 minutos
     refetchOnMount: false, // Não refetch ao montar o componente
     refetchOnWindowFocus: false, // Não refetch quando a janela ganha foco
     refetchOnReconnect: false // Não refetch ao reconectar
   });
 
-  // Resetar a página atual quando os filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
-  // Adicionando um novo efeito para scrollar para o topo ao mudar de página
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
@@ -85,7 +83,6 @@ const Index = () => {
       const matchesFamilia2 = familia2.length === 0 || familia2.includes(produto.familia2);
       const matchesProduto = produtos.length === 0 || produtos.includes(produto.produto);
       
-      // Removido a verificação do campo ativo que não existe
       return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
     });
   };
@@ -101,10 +98,8 @@ const Index = () => {
     );
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
-  // Calcular o número total de páginas
   const totalPages = Math.ceil((filteredProdutos?.length || 0) / ITEMS_PER_PAGE);
   
-  // Calcular quais produtos mostrar na página atual
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProdutos?.length || 0);
   const currentProdutos = filteredProdutos?.slice(startIndex, endIndex) || [];
