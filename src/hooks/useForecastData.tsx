@@ -121,6 +121,7 @@ export const useForecastData = (produto: string) => {
         const transformedData: { [key: string]: { [key: string]: number } } = {};
         
         data.forEach(row => {
+          // Join with grupos table info using ano and id_tipo
           const key = `${row.ano}-${row.id_tipo}`;
           if (!transformedData[key]) {
             transformedData[key] = {};

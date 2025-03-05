@@ -21,7 +21,6 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           {
             produto_codigo: productCodigo,
             ano,
-            tipo,
             id_tipo,
             mes,
             valor

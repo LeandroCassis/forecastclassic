@@ -12,32 +12,26 @@ export type Database = {
       forecast_values: {
         Row: {
           ano: number
-          data_registro: string | null
           id: string
           id_tipo: number
           mes: string
           produto_codigo: string | null
-          tipo: string
           valor: number
         }
         Insert: {
           ano: number
-          data_registro?: string | null
           id?: string
           id_tipo: number
           mes: string
           produto_codigo?: string | null
-          tipo: string
           valor: number
         }
         Update: {
           ano?: number
-          data_registro?: string | null
           id?: string
           id_tipo?: number
           mes?: string
           produto_codigo?: string | null
-          tipo?: string
           valor?: number
         }
         Relationships: [
