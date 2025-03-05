@@ -11,7 +11,7 @@ export const useForecastData = (produto: string) => {
       try {
         const { data, error } = await supabase
           .from('produtos')
-          .select('id')
+          .select('codigo')
           .eq('produto', produto)
           .maybeSingle();
         
@@ -99,19 +99,19 @@ export const useForecastData = (produto: string) => {
 
   // Forecast values query specific to the product
   const { data: forecastValues, isError: forecastError } = useQuery({
-    queryKey: ['forecast_values', productData?.id],
+    queryKey: ['forecast_values', productData?.codigo],
     queryFn: async () => {
-      if (!productData?.id) {
-        console.log('No product ID available yet, skipping forecast values fetch');
+      if (!productData?.codigo) {
+        console.log('No product codigo available yet, skipping forecast values fetch');
         return {};
       }
       
-      console.log('Fetching forecast values for product ID:', productData.id);
+      console.log('Fetching forecast values for product codigo:', productData.codigo);
       try {
         const { data, error } = await supabase
           .from('forecast_values')
           .select('*')
-          .eq('produto_id', productData.id);
+          .eq('produto_codigo', productData.codigo);
         
         if (error) {
           console.error('Error fetching forecast values:', error);
@@ -135,7 +135,7 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
-    enabled: !!productData?.id,
+    enabled: !!productData?.codigo,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     retry: 3
   });

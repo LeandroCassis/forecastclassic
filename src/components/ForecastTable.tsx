@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ForecastTableRow } from './ForecastTableRow';
@@ -14,7 +15,7 @@ const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', '
 const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
   const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto);
-  const { updateMutation } = useForecastMutations(productData?.id);
+  const { updateMutation } = useForecastMutations(productData?.codigo);
   const { toast } = useToast();
 
   const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {

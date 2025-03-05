@@ -16,7 +16,7 @@ export type Database = {
           id: string
           id_tipo: number
           mes: string
-          produto_id: string | null
+          produto_codigo: string | null
           tipo: string
           valor: number
         }
@@ -26,7 +26,7 @@ export type Database = {
           id?: string
           id_tipo: number
           mes: string
-          produto_id?: string | null
+          produto_codigo?: string | null
           tipo: string
           valor: number
         }
@@ -36,7 +36,7 @@ export type Database = {
           id?: string
           id_tipo?: number
           mes?: string
-          produto_id?: string | null
+          produto_codigo?: string | null
           tipo?: string
           valor?: number
         }
@@ -49,11 +49,11 @@ export type Database = {
             referencedColumns: ["ano", "id_tipo"]
           },
           {
-            foreignKeyName: "forecast_values_produto_id_fkey"
-            columns: ["produto_id"]
+            foreignKeyName: "forecast_values_produto_codigo_fkey"
+            columns: ["produto_codigo"]
             isOneToOne: false
             referencedRelation: "produtos"
-            referencedColumns: ["id"]
+            referencedColumns: ["codigo"]
           },
         ]
       }
@@ -86,7 +86,6 @@ export type Database = {
           ano: number
           created_at: string | null
           data: string
-          id: string
           mes: string
           pct_atual: number
           pct_geral: number
@@ -97,7 +96,6 @@ export type Database = {
           ano: number
           created_at?: string | null
           data: string
-          id?: string
           mes: string
           pct_atual: number
           pct_geral: number
@@ -108,7 +106,6 @@ export type Database = {
           ano?: number
           created_at?: string | null
           data?: string
-          id?: string
           mes?: string
           pct_atual?: number
           pct_geral?: number
@@ -128,7 +125,6 @@ export type Database = {
           familia1: string
           familia2: string
           fob: number | null
-          id: string
           indice: number | null
           marca: string
           moedafob: string | null
@@ -146,7 +142,6 @@ export type Database = {
           familia1: string
           familia2: string
           fob?: number | null
-          id?: string
           indice?: number | null
           marca: string
           moedafob?: string | null
@@ -164,7 +159,6 @@ export type Database = {
           familia1?: string
           familia2?: string
           fob?: number | null
-          id?: string
           indice?: number | null
           marca?: string
           moedafob?: string | null
