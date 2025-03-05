@@ -60,22 +60,22 @@ export type Database = {
       grupos: {
         Row: {
           ano: number
+          code: string | null
           created_at: string | null
-          id: number
           id_tipo: number
           tipo: string
         }
         Insert: {
           ano: number
+          code?: string | null
           created_at?: string | null
-          id?: number
           id_tipo: number
           tipo: string
         }
         Update: {
           ano?: number
+          code?: string | null
           created_at?: string | null
-          id?: number
           id_tipo?: number
           tipo?: string
         }

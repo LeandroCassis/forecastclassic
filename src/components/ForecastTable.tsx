@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ForecastTableRow } from './ForecastTableRow';
@@ -51,7 +50,6 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
       return;
     }
 
-    // Calculate sum of realized months
     const key = `${ano}-${id_tipo}`;
     const realizedMonthsTotal = months.reduce((sum, month) => {
       if (yearConfig[month]?.realizado && forecastValues?.[key]?.[month]) {
@@ -62,17 +60,14 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
 
     console.log('Realized months total:', realizedMonthsTotal);
 
-    // Calculate remaining amount to distribute
     const remainingTotal = numericTotal - realizedMonthsTotal;
     console.log('Remaining total to distribute:', remainingTotal);
 
-    // Calculate sum of percentages for unrealized months
     const openMonthsPercentageSum = Object.values(yearConfig)
       .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
     console.log('Open months percentage sum:', openMonthsPercentageSum);
 
-    // Distribute remaining total across unrealized months
     months.forEach(month => {
       const monthConfig = yearConfig[month];
       if (monthConfig && !monthConfig.realizado) {
@@ -146,7 +141,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
           <TableBody>
             {grupos.map((grupo) => (
               <ForecastTableRow
-                key={`${grupo.ano}-${grupo.id_tipo}`}
+                key={grupo.code || `${grupo.ano}-${grupo.id_tipo}`}
                 ano={grupo.ano}
                 tipo={grupo.tipo}
                 id_tipo={grupo.id_tipo}

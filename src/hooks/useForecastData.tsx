@@ -38,7 +38,7 @@ export const useForecastData = (produto: string) => {
       try {
         const { data, error } = await supabase
           .from('grupos')
-          .select('*')
+          .select('ano, id_tipo, tipo, code')
           .order('ano')
           .order('id_tipo');
         
@@ -161,4 +161,5 @@ export interface Grupo {
   ano: number;
   id_tipo: number;
   tipo: string;
+  code: string;
 }
