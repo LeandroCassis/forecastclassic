@@ -16,6 +16,9 @@ export type Database = {
           id_tipo: number
           mes: string
           produto_codigo: string | null
+          updated_at: string | null
+          updated_by: string | null
+          user_id: string | null
           valor: number
         }
         Insert: {
@@ -24,6 +27,9 @@ export type Database = {
           id_tipo: number
           mes: string
           produto_codigo?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
           valor: number
         }
         Update: {
@@ -32,6 +38,9 @@ export type Database = {
           id_tipo?: number
           mes?: string
           produto_codigo?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
           valor?: number
         }
         Relationships: [
