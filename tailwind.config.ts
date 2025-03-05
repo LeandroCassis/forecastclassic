@@ -25,7 +25,7 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         table: {
-          header: "#1B4332", // Verde escuro para o cabeçalho
+          header: "#262626", //"#1B4332", // Verde escuro para o cabeçalho
           row: "#f8fafc",
           altRow: "#f1f5f9",
           border: "#e2e8f0"

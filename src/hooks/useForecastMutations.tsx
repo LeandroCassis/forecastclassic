@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
 
-export const useForecastMutations = (productId: string | undefined) => {
+const API_URL = 'http://localhost:3001/api';
+
+export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
@@ -12,26 +13,25 @@ export const useForecastMutations = (productId: string | undefined) => {
       mes: string, 
       valor: number 
     }) => {
-      if (!productId) throw new Error('Product ID not found');
+      if (!productCodigo) throw new Error('Product code not found');
 
-      const { error } = await supabase
-        .from('forecast_values')
-        .upsert(
-          {
-            produto_id: productId,
-            ano,
-            tipo,
-            id_tipo,
-            mes,
-            valor
-          },
-          {
-            onConflict: 'produto_id,ano,id_tipo,mes',
-            ignoreDuplicates: false
-          }
-        );
+      const response = await fetch(`${API_URL}/forecast-values`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productCodigo,
+          ano,
+          id_tipo,
+          mes,
+          valor
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });

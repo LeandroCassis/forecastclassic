@@ -6,12 +6,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 
-const queryClient = new QueryClient();
+// Configure the query client with default options
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,
+      cacheTime: Infinity,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
         <TooltipProvider>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -19,8 +30,8 @@ const App = () => {
           <Toaster />
           <Sonner />
         </TooltipProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 
