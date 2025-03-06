@@ -7,13 +7,20 @@ import { Users } from 'lucide-react';
 
 const UserPresenceIndicator: React.FC = () => {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [isError, setIsError] = useState(false);
   const { user } = useAuth();
   
   useEffect(() => {
     // Fetch online users initially
     const fetchOnlineUsers = async () => {
-      const users = await getOnlineUsers();
-      setOnlineUsers(users);
+      try {
+        const users = await getOnlineUsers();
+        setOnlineUsers(users);
+        setIsError(false);
+      } catch (error) {
+        console.error('Error fetching online users:', error);
+        setIsError(true);
+      }
     };
     
     fetchOnlineUsers();
@@ -25,6 +32,18 @@ const UserPresenceIndicator: React.FC = () => {
   }, []);
   
   if (!user) return null;
+  
+  // If we have an error, show a simple indicator
+  if (isError) {
+    return (
+      <div className="flex items-center">
+        <div className="flex text-gray-400 text-sm">
+          <Users size={16} className="mr-1" />
+          <span>Você está online</span>
+        </div>
+      </div>
+    );
+  }
   
   // Filter out current user from the display list
   const otherUsers = onlineUsers.filter(onlineUser => onlineUser.id !== user.id);
