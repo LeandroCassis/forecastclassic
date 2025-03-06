@@ -3,7 +3,7 @@ import sql from 'mssql';
 
 const config: sql.config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'VESPERTTINE',
+    database: 'FORECAST', // Changed from VESPERTTINE to FORECAST
     user: 'vesperttine',
     password: '840722aA',
     options: {
