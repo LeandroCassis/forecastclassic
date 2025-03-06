@@ -1,4 +1,3 @@
-
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
@@ -195,6 +194,7 @@ const PRESENCE_TIMEOUT = 2 * 60 * 1000; // 2 minutes in milliseconds
 // Presence routes
 app.post('/api/presence/update', (req, res) => {
   try {
+    console.log('Presence update request received', req.body);
     const { userId, username, nome } = req.body;
     
     if (!userId || !username) {
@@ -220,6 +220,7 @@ app.post('/api/presence/update', (req, res) => {
 
 app.get('/api/presence/users', (req, res) => {
   try {
+    console.log('Get online users request received');
     const now = new Date();
     const activeUsers = [];
     
@@ -261,7 +262,7 @@ setInterval(() => {
 
 // API Routes
 
-// Authentication endpoint - made more robust
+// Authentication endpoint
 app.post('/api/auth/login', async (req, res) => {
     try {
         console.log('Login attempt received:', req.body);

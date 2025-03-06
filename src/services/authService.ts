@@ -44,24 +44,13 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
-// Function to get API base URL
-const getApiBaseUrl = (): string => {
-  // For local development
-  if (window.location.hostname === 'localhost') {
-    return 'http://localhost:3005';
-  }
-  
-  // For production - use relative path to leverage proxy
-  return '';
-};
-
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    const baseUrl = getApiBaseUrl();
-    const apiUrl = `${baseUrl}/api/auth/login`;
+    // Always use /api prefix for consistency
+    const apiUrl = '/api/auth/login';
     
     console.log('Login request to API URL:', apiUrl);
     
@@ -80,7 +69,7 @@ export const login = async (username: string, password: string): Promise<User> =
       const errorText = await response.text();
       console.error('Login failed with status:', response.status);
       console.error('Response body:', errorText);
-      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+      throw new Error(`Login failed: ${response.status}`);
     }
 
     const contentType = response.headers.get("content-type");

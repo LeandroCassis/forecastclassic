@@ -15,7 +15,8 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         secure: false,
         ws: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // Don't rewrite the path to remove /api, our server handles /api prefix
+        rewrite: (path) => path,
       }
     }
   },
