@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -54,19 +55,47 @@ export const login = async (username: string, password: string): Promise<User> =
       body: JSON.stringify({ username, password }),
     });
 
-    if (!response.ok) {
-      throw new Error('Login failed');
+    // Check if we received HTML instead of JSON (server not running)
+    const responseText = await response.text();
+    if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+      toast({
+        title: "Erro de conexão",
+        description: "O servidor não está rodando. Por favor, execute 'npm start' no terminal.",
+        variant: "destructive"
+      });
+      throw new Error('Server is not running');
     }
 
-    const user = await response.json();
+    // Try to parse JSON response
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      toast({
+        title: "Erro de dados",
+        description: "Resposta inválida do servidor. Por favor, verifique se o servidor está rodando corretamente.",
+        variant: "destructive"
+      });
+      throw new Error('Invalid server response');
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
     
     // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(user));
-    currentUser = user;
+    localStorage.setItem('user', JSON.stringify(data));
+    currentUser = data;
     
-    return user;
+    return data;
   } catch (error) {
-    toast({ title: 'Login failed', description: error.message });
+    if (error.message !== 'Server is not running' && error.message !== 'Invalid server response') {
+      toast({ 
+        title: 'Erro no login', 
+        description: error.message,
+        variant: "destructive"
+      });
+    }
     throw error;
   }
 };
