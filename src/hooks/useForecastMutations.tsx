@@ -44,7 +44,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           valor,
           userId: currentUser.id,
           username: currentUser.username,
-          userFullName: currentUser.name
+          userFullName: currentUser.nome
         }),
       });
 
