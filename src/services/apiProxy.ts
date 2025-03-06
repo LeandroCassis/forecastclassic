@@ -68,66 +68,50 @@ export async function apiRequest<T>(
       const response = await fetch(url, options);
       console.log(`API Response: ${response.status} from ${url}`);
       
-      // Verificar o content type da resposta
-      const contentType = response.headers.get('content-type');
-      console.log('Content-Type:', contentType);
-      
-      // Handle different response types
-      if (response.status === 204 || response.status === 205) {
-        // No content response
-        return {
-          status: response.status,
-          success: response.ok
-        };
-      }
-      
-      // For successful responses with content
-      if (response.ok) {
-        // Try JSON first
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
-          return { data, status: response.status, success: true };
-        }
-        
-        // For non-JSON successful responses, provide the text as debug info
-        const textContent = await response.text();
-        console.warn('Non-JSON successful response:', textContent.substring(0, 500));
-        
-        return {
-          error: 'Response is not JSON but request was successful',
-          data: { message: textContent.substring(0, 100) } as any,
-          status: response.status,
-          success: true
-        };
-      }
-      
-      // Handle error responses
+      // Log do corpo da resposta para debug
+      let responseText = '';
       try {
-        // Try to parse as JSON first
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
+        responseText = await response.clone().text();
+        console.log(`Response body: ${responseText.substring(0, 1000)}`);
+      } catch (e) {
+        console.error('Error reading response text:', e);
+      }
+      
+      // Verificar se o corpo está vazio
+      if (!responseText.trim()) {
+        console.warn('Empty response body');
+        return {
+          status: response.status,
+          success: response.ok,
+          error: response.ok ? undefined : 'Empty response from server'
+        };
+      }
+      
+      // Tentar analisar como JSON
+      try {
+        const data = JSON.parse(responseText);
+        return {
+          data,
+          status: response.status,
+          success: response.ok,
+          error: !response.ok ? (data.error || `Error ${response.status}`) : undefined
+        };
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        // Se não for JSON válido e a resposta não estiver OK, retornar erro
+        if (!response.ok) {
           return {
-            error: errorData.error || errorData.message || `Error ${response.status}`,
+            error: `Invalid JSON response: ${responseText.substring(0, 100)}...`,
             status: response.status,
             success: false
           };
         }
         
-        // Handle non-JSON error responses
-        const errorText = await response.text();
-        console.error(`Non-JSON error response (${response.status}):`, errorText.substring(0, 500));
-        
+        // Se não for JSON válido, mas a resposta estiver OK, tentar retornar como texto
         return {
-          error: `Server error: ${response.status}`,
+          data: { text: responseText } as any,
           status: response.status,
-          success: false
-        };
-      } catch (parseError) {
-        console.error('Error parsing response:', parseError);
-        return {
-          error: `Failed to parse server response: ${response.status}`,
-          status: response.status,
-          success: false
+          success: true
         };
       }
     } catch (networkError) {
@@ -155,11 +139,23 @@ export async function apiRequest<T>(
 /**
  * Função específica para autenticação que lida com casos especiais
  */
-export async function loginRequest(username: string, password: string) {
+export async function loginRequest(username: string, password: string): Promise<ApiResponse<any>> {
+  console.log(`Attempting login for user: ${username}`);
+  
   try {
-    return await apiRequest('/auth/login', 'POST', { username, password }, 3);
+    const response = await apiRequest('/auth/login', 'POST', { username, password }, 2);
+    
+    console.log('Login response:', response);
+    
+    // Garantir que sempre retornamos um objeto com a mesma estrutura
+    return {
+      data: response.data,
+      error: response.error,
+      status: response.status,
+      success: response.success
+    };
   } catch (error) {
-    console.error('Login request failed:', error);
+    console.error('Login request error:', error);
     return {
       error: `Login failed: ${(error as Error).message}`,
       status: 0,

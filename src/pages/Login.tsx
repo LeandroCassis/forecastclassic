@@ -1,11 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
@@ -39,15 +38,19 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
+      console.log('Attempting login with credentials:', username);
       await login(username, password);
+      console.log('Login successful, navigating to home');
+      
       toast({
         title: "Login realizado com sucesso",
         description: "Bem-vindo ao sistema de S&OP"
       });
+      
       navigate('/');
     } catch (error) {
-      setError((error as Error).message);
-      console.error('Login error:', error);
+      console.error('Login error in component:', error);
+      setError((error as Error).message || 'Erro desconhecido durante o login');
     } finally {
       setIsLoading(false);
     }

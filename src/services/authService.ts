@@ -9,15 +9,6 @@ export interface User {
   role: string;
 }
 
-// Interface for API response data
-interface UserResponse {
-  id: number;
-  username: string;
-  nome?: string;
-  role?: string;
-  [key: string]: any; // For any other properties that might be returned
-}
-
 // Store the current authenticated user
 let currentUser: User | null = null;
 
@@ -69,15 +60,16 @@ export const login = async (username: string, password: string): Promise<User> =
       throw new Error(`Login failed: ${errorMsg}`);
     }
     
-    // Type assertion to help TypeScript understand the structure
-    const userData = response.data as UserResponse;
-    console.log('Login successful:', userData);
+    console.log('Login successful, raw data:', response.data);
     
-    // Verificar se os campos necessários estão presentes
-    if (!userData || typeof userData !== 'object') {
-      console.error('Invalid user data received (not an object):', userData);
+    // Verificar se os dados do usuário são um objeto válido
+    if (!response.data || typeof response.data !== 'object') {
+      console.error('Invalid user data received (not an object):', response.data);
       throw new Error("Login failed: Invalid user data format received from server");
     }
+    
+    // Extrair propriedades com verificações seguras
+    const userData = response.data as Record<string, any>;
     
     if (!userData.id || !userData.username) {
       console.error('Invalid user data received (missing required fields):', userData);
@@ -86,11 +78,13 @@ export const login = async (username: string, password: string): Promise<User> =
     
     // Garantir que todos os campos estão presentes, mesmo com valores padrão
     const normalizedUser: User = {
-      id: userData.id,
-      username: userData.username,
-      nome: userData.nome || username, // Use o username se nome estiver ausente
-      role: userData.role || 'user'
+      id: Number(userData.id),
+      username: String(userData.username),
+      nome: userData.nome ? String(userData.nome) : username, // Use o username se nome estiver ausente
+      role: userData.role ? String(userData.role) : 'user'
     };
+    
+    console.log('Normalized user data:', normalizedUser);
     
     // Store user info in localStorage and memory
     localStorage.setItem('user', JSON.stringify(normalizedUser));
