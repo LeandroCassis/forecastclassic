@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, isAuthenticated, getCurrentUser, login, logout } from '@/services/authService';
+import { User, isAuthenticated, getCurrentUser, loginUser, logoutUser } from '@/services/authService';
 import { startPresenceService, stopPresenceService } from '@/services/presenceService';
 
 interface AuthContextType {
@@ -30,12 +30,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // Check if user is already authenticated on mount
     if (isAuthenticated()) {
-      setUser(getCurrentUser());
-      
-      // Start presence service for authenticated users
-      startPresenceService();
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        startPresenceService();
+      }
     }
     setLoading(false);
     
@@ -48,7 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleLogin = async (username: string, password: string) => {
     setLoading(true);
     try {
-      const loggedInUser = await login(username, password);
+      const loggedInUser = await loginUser(username, password);
       setUser(loggedInUser);
       
       // Start presence service after login
@@ -62,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Stop presence service before logout
     stopPresenceService();
     
-    logout();
+    logoutUser();
     setUser(null);
   };
 

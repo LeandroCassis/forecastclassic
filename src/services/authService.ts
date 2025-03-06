@@ -1,5 +1,5 @@
+
 import { toast } from "@/hooks/use-toast";
-import { loginRequest } from "./apiProxy";
 
 export interface User {
   id: number;
@@ -8,96 +8,101 @@ export interface User {
   role: string;
 }
 
-// Store the current authenticated user
-let currentUser: User | null = null;
-
-// Check if user is authenticated
-export const isAuthenticated = (): boolean => {
-  if (currentUser) return true;
-  
-  // Check if we have user info in localStorage
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    try {
-      currentUser = JSON.parse(storedUser);
-      return true;
-    } catch (e) {
-      localStorage.removeItem('user');
-    }
-  }
-  return false;
+// API base URL helper
+const getApiBaseUrl = (): string => {
+  return window.location.hostname === 'localhost' ? 'http://localhost:3005' : '';
 };
 
-// Get the current user
-export const getCurrentUser = (): User | null => {
-  if (currentUser) return currentUser;
-  
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    try {
-      currentUser = JSON.parse(storedUser);
-      return currentUser;
-    } catch (e) {
-      localStorage.removeItem('user');
-    }
-  }
-  return null;
-};
-
-// Login function using API
-export const login = async (username: string, password: string): Promise<User> => {
+// Direct API call for authentication
+export const loginUser = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    // Usar o loginRequest do apiProxy que é mais robusto
-    const response = await loginRequest(username, password);
+    const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'
+    });
+
+    console.log('Login response status:', response.status);
     
-    // Verificar se a requisição foi bem-sucedida
-    if (!response.success || !response.data) {
-      const errorMsg = response.error || `Erro ${response.status}`;
-      console.error('Login failed:', errorMsg);
-      throw new Error(`Login failed: ${errorMsg}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Login error response:', error);
+      throw new Error(`Login failed: ${response.status} ${error || 'Unknown error'}`);
     }
     
-    const user = response.data;
-    console.log('Login successful:', user);
+    // Try to parse the response as JSON
+    let userData: User;
+    const responseText = await response.text();
     
-    // Verificar se os campos necessários estão presentes
-    if (!user || typeof user !== 'object') {
-      console.error('Invalid user data received (not an object):', user);
-      throw new Error("Login failed: Invalid user data format received from server");
+    try {
+      userData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse login response as JSON:', e, 'Response was:', responseText);
+      throw new Error('Invalid response format from server');
     }
     
-    if (!user.id || !user.username) {
-      console.error('Invalid user data received (missing required fields):', user);
-      throw new Error("Login failed: Invalid user data received from server");
+    // Validate the user data
+    if (!userData || typeof userData !== 'object' || !userData.id || !userData.username) {
+      console.error('Invalid user data received:', userData);
+      throw new Error('Invalid user data received from server');
     }
     
-    // Garantir que todos os campos estão presentes, mesmo com valores padrão
-    const normalizedUser: User = {
-      id: user.id,
-      username: user.username,
-      nome: user.nome || username, // Use o username se nome estiver ausente
-      role: user.role || 'user'
-    };
+    // Store user in localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
     
-    // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
-    currentUser = normalizedUser;
-    
-    return normalizedUser;
+    return userData;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login process error:', error);
     toast({ 
-      title: 'Login falhou', 
-      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação'
+      title: 'Erro no login', 
+      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação',
+      variant: 'destructive'
     });
     throw error;
   }
 };
 
+// Check if a user is authenticated
+export const isAuthenticated = (): boolean => {
+  try {
+    const userJson = localStorage.getItem('user');
+    if (!userJson) return false;
+    
+    const user = JSON.parse(userJson);
+    return Boolean(user && user.id && user.username);
+  } catch {
+    return false;
+  }
+};
+
+// Get the current authenticated user
+export const getCurrentUser = (): User | null => {
+  try {
+    const userJson = localStorage.getItem('user');
+    if (!userJson) return null;
+    
+    const user = JSON.parse(userJson);
+    if (!user || !user.id || !user.username) {
+      localStorage.removeItem('user');
+      return null;
+    }
+    
+    return user;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
 // Logout function
-export const logout = (): void => {
+export const logoutUser = (): void => {
   localStorage.removeItem('user');
-  currentUser = null;
+  // Redirect to login page if needed
+  window.location.href = '/login';
 };
