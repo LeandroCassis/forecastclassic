@@ -23,8 +23,8 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
   return <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl shadow-lg border border-b-0 border-blue-100/50 p-4 pb-3">
       <div className=" flex justify-between text-[1rem] ">
         <div className="text-center">
-          <div className="font-semibold text-black -500 mb-0.5 rounded-none">PRODUTO</div>
-          <div className="text-black text-base py-0 ">{produto}</div>
+          
+          <div className="text-black text-2xl py-0 ">{produto}</div>
         </div>
         <div className="text-center">
           <div className="font-semibold text-black -500 mb-0.5 rounded-none">COD PRODUTO</div>
