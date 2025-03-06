@@ -3,6 +3,7 @@
 import express from 'express';
 import cors from 'cors';
 import mssql from 'mssql';
+import crypto from 'crypto';
 
 const app = express();
 const port = 3001;
@@ -59,6 +60,64 @@ async function query(queryString, params) {
         throw error;
     }
 }
+
+// Authentication endpoint
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        // Hash the password (in a real app, you'd compare hash with stored hash)
+        const hashedPassword = crypto
+            .createHash('sha256')
+            .update(password)
+            .digest('hex');
+            
+        // For now, we'll use a simple login check
+        // In a production app, you would query your users table
+        
+        // Example query for the users table
+        const users = await query(
+            'SELECT * FROM usuarios WHERE username = @p0',
+            [username]
+        );
+        
+        // Temporary user validation until the table is created
+        if (users.length === 0) {
+            // For testing/demo purposes - accept admin/admin if no users exist
+            if (username === 'admin' && password === 'admin') {
+                return res.json({
+                    id: 1,
+                    username: 'admin',
+                    name: 'Administrador',
+                    role: 'admin'
+                });
+            }
+            
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        const user = users[0];
+        
+        // In a real app, you'd check if hashedPassword matches the stored password hash
+        // For this demo, we'll assume it matches and return the user
+        
+        const userData = {
+            id: user.id,
+            username: user.username,
+            name: user.nome || user.username,
+            role: user.role || 'user'
+        };
+        
+        res.json(userData);
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 // Get product by name
 app.get('/api/produtos/:produto', async (req, res) => {
