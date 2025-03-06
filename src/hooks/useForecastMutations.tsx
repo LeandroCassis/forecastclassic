@@ -1,7 +1,7 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
+import { config } from '@/config/env';
 
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
@@ -16,7 +16,6 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
     }) => {
       if (!productCodigo) throw new Error('Product code not found');
       
-      // Get current user
       const currentUser = getCurrentUser();
       if (!currentUser) throw new Error('User not authenticated');
       
@@ -29,12 +28,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         valor
       });
 
-      // Use the complete URL to avoid proxy issues in development
-      const API_URL = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3005/api' 
-        : '/api';
-
-      const response = await fetch(`${API_URL}/forecast-values`, {
+      const response = await fetch(`${config.API_URL}/forecast-values`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,7 +41,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           valor,
           userId: currentUser.id,
           username: currentUser.username,
-          userFullName: currentUser.nome
+          userFullName: currentUser.name
         }),
       });
 
@@ -74,10 +68,9 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
     },
-    onError: (error) => {
-      console.error('Mutation error:', error);
-    }
   });
 
-  return { updateMutation };
+  return {
+    updateMutation,
+  };
 };
