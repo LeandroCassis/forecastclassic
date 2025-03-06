@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
@@ -17,6 +18,15 @@ interface Produto {
   familia1: string;
   familia2: string;
   empresa: string;
+}
+
+// Define filter options interface to ensure proper typing
+interface FilterOptions {
+  marcas: string[];
+  fabricas: string[];
+  familia1: string[];
+  familia2: string[];
+  produtos: string[];
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -118,12 +128,16 @@ const Index = () => {
       familia2: [],
       produtos: []
     };
+    
+    // Safely cast the arrays with type assertions
+    const allProdutos = produtos as Produto[];
+    
     return {
-      marcas: Array.from(new Set(produtos.map(p => p.marca))).sort(),
-      fabricas: Array.from(new Set(produtos.map(p => p.fabrica))).sort(),
-      familia1: Array.from(new Set(produtos.map(p => p.familia1))).sort(),
-      familia2: Array.from(new Set(produtos.map(p => p.familia2))).sort(),
-      produtos: Array.from(new Set(produtos.map(p => p.produto))).sort()
+      marcas: Array.from(new Set(allProdutos.map(p => p.marca))).sort(),
+      fabricas: Array.from(new Set(allProdutos.map(p => p.fabrica))).sort(),
+      familia1: Array.from(new Set(allProdutos.map(p => p.familia1))).sort(),
+      familia2: Array.from(new Set(allProdutos.map(p => p.familia2))).sort(),
+      produtos: Array.from(new Set(allProdutos.map(p => p.produto))).sort()
     };
   }, [produtos]);
 
