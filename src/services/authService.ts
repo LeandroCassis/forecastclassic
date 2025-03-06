@@ -3,7 +3,7 @@ import { toast } from "@/hooks/use-toast";
 export interface User {
   id: number;
   username: string;
-  name: string;
+  nome: string;
   role: string;
 }
 
