@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 
-const API_URL = 'http://localhost:3001/api';
+// Base API URL - must match what's in authService.ts
+const API_URL = 'http://localhost:3005/api';
 
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();

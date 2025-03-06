@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -9,6 +10,9 @@ export interface User {
 
 // Store the current authenticated user
 let currentUser: User | null = null;
+
+// Base API URL - this should match the Express server port
+const API_URL = 'http://localhost:3005/api';
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -46,7 +50,9 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    const response = await fetch('/api/auth/login', {
+    console.log('Attempting login to:', `${API_URL}/auth/login`);
+    
+    const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,10 +61,13 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      throw new Error('Login failed');
+      const errorData = await response.text();
+      console.error('Login failed response:', errorData);
+      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
     }
 
     const user = await response.json();
+    console.log('Login successful:', user);
     
     // Store user info in localStorage and memory
     localStorage.setItem('user', JSON.stringify(user));
@@ -66,7 +75,11 @@ export const login = async (username: string, password: string): Promise<User> =
     
     return user;
   } catch (error) {
-    toast({ title: 'Login failed', description: error.message });
+    console.error('Login error:', error);
+    toast({ 
+      title: 'Login failed', 
+      description: error.message || 'Failed to connect to the authentication server'
+    });
     throw error;
   }
 };
