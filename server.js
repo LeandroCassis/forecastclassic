@@ -24,6 +24,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Configurar middleware para garantir resposta JSON em todas as rotas API
+app.use('/api', (req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
@@ -315,11 +321,16 @@ app.post('/api/auth/login', async (req, res) => {
         };
         
         console.log('Login successful for user:', username);
+        
+        // Garantir que o cabeçalho Content-Type esteja configurado corretamente
         res.setHeader('Content-Type', 'application/json');
-        res.json(userData);
+        return res.json(userData);
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ 
+        
+        // Garantir que erros também sejam retornados como JSON
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(500).json({ 
             error: 'Internal server error',
             details: err.message 
         });
