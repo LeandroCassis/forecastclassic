@@ -57,18 +57,8 @@ export const updatePresence = async (): Promise<void> => {
     if (!response.ok) {
       throw new Error(`Failed to update presence: ${response.status}`);
     }
-    
-    // Check if response is valid JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      console.warn('Presence update received non-JSON response');
-      return;
-    }
-    
-    await response.json(); // Parse but we don't need the result
   } catch (error) {
     console.error('Presence update error:', error);
-    // We don't show toasts for presence errors to avoid disrupting the user
   }
 };
 
@@ -76,16 +66,8 @@ export const updatePresence = async (): Promise<void> => {
 export const getOnlineUsers = async (): Promise<OnlineUser[]> => {
   try {
     const response = await fetch(`${getApiUrl()}/presence/users`);
-    
     if (!response.ok) {
       throw new Error(`Failed to get online users: ${response.status}`);
-    }
-    
-    // Check if response is valid JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      console.warn('Get online users received non-JSON response');
-      return onlineUsers; // Return cached data on error
     }
     
     const users = await response.json();
