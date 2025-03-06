@@ -10,18 +10,33 @@ export default defineConfig(({ mode }) => {
   // Start the backend server when Vite starts
   if (mode === 'development') {
     console.log('🚀 Iniciando o servidor de backend...');
-    const serverProcess = spawn('npm', ['start'], {
+    
+    // Kill any existing process on port 3005 (Windows compatible)
+    const findProcess = spawn('npx', ['kill-port', '3005'], {
       stdio: 'inherit',
       shell: true
     });
     
-    serverProcess.on('error', (error) => {
-      console.error('❌ Erro ao iniciar o servidor de backend:', error);
-    });
-    
-    process.on('exit', () => {
-      console.log('🛑 Encerrando o servidor de backend...');
-      serverProcess.kill();
+    findProcess.on('close', () => {
+      console.log('🔄 Porta liberada, iniciando servidor...');
+      
+      // Start the server with a delay to ensure port is free
+      setTimeout(() => {
+        const serverProcess = spawn('node', ['server.js'], {
+          stdio: 'inherit',
+          shell: true,
+          env: { ...process.env, PORT: '3005' }
+        });
+        
+        serverProcess.on('error', (error) => {
+          console.error('❌ Erro ao iniciar o servidor de backend:', error);
+        });
+        
+        process.on('exit', () => {
+          console.log('🛑 Encerrando o servidor de backend...');
+          serverProcess.kill();
+        });
+      }, 1000);
     });
   }
 
@@ -34,7 +49,24 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3005',
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path
+          rewrite: (path) => path,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, res) => {
+              console.log('Proxy error:', err);
+              const htmlResponse = `
+                <!DOCTYPE html>
+                <html>
+                  <body>
+                    <h1>Erro de conexão com o servidor</h1>
+                    <p>O servidor de backend não está respondendo. Aguarde alguns instantes enquanto ele inicia.</p>
+                  </body>
+                </html>
+              `;
+              if (res.headersSent) return;
+              res.writeHead(500, { 'Content-Type': 'text/html' });
+              res.end(htmlResponse);
+            });
+          }
         }
       }
     },

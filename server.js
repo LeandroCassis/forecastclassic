@@ -1,20 +1,23 @@
-
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
 import mssql from 'mssql';
-import crypto from 'crypto';
 
 const app = express();
-const port = 3005;
+const port = process.env.PORT || 3005;
 
 // Configure middleware before routes
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Health check endpoint with detailed information
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    server: 'running',
+    port
+  });
 });
 
 // Database configuration
@@ -36,16 +39,32 @@ const config = {
 };
 
 let pool = null;
+let isConnecting = false;
+let lastConnectionAttempt = 0;
 
 async function getConnection() {
     try {
-        if (!pool) {
-            console.log('Connecting to Azure SQL Database...');
-            pool = await new mssql.ConnectionPool(config).connect();
-            console.log('Successfully connected to Azure SQL Database');
+        // If we already have a pool, return it
+        if (pool) {
+            return pool;
         }
+        
+        // Prevent multiple simultaneous connection attempts
+        const now = Date.now();
+        if (isConnecting && now - lastConnectionAttempt < 10000) {
+            throw new Error('Database connection in progress');
+        }
+        
+        isConnecting = true;
+        lastConnectionAttempt = now;
+        
+        console.log('Connecting to Azure SQL Database...');
+        pool = await new mssql.ConnectionPool(config).connect();
+        console.log('Successfully connected to Azure SQL Database');
+        isConnecting = false;
         return pool;
     } catch (err) {
+        isConnecting = false;
         console.error('Database connection error:', err);
         throw err;
     }
@@ -175,10 +194,24 @@ async function createUsers() {
     }
 }
 
-// Initialize database on server start
-initializeDatabase()
-    .then(() => createUsers())
-    .catch(console.error);
+// Try to initialize the database with retries
+function initWithRetry(retries = 5, delay = 5000) {
+    console.log(`Attempting to initialize database (${retries} retries left)...`);
+    initializeDatabase()
+        .then(() => createUsers())
+        .catch(err => {
+            console.error('Failed to initialize database:', err);
+            if (retries > 0) {
+                console.log(`Retrying in ${delay/1000} seconds...`);
+                setTimeout(() => initWithRetry(retries - 1, delay), delay);
+            } else {
+                console.error('Maximum retries reached. Please check database connection.');
+            }
+        });
+}
+
+// Initialize database on server start with retry mechanism
+initWithRetry();
 
 // API Routes
 app.post('/api/auth/login', async (req, res) => {
@@ -386,7 +419,25 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
     }
 });
 
+// Catch-all error handler
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error',
+        message: err.message
+    });
+});
+
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
+});
+
+// Handle process termination
+process.on('SIGINT', () => {
+    console.log('Server shutting down...');
+    if (pool) {
+        pool.close();
+    }
+    process.exit(0);
 });

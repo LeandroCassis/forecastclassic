@@ -11,6 +11,7 @@ export interface User {
 // Store the current authenticated user
 let currentUser: User | null = null;
 let serverStartAttempted = false;
+let isServerStarting = false;
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -49,10 +50,37 @@ export const getCurrentUser = (): User | null => {
 const checkServerStatus = async (): Promise<boolean> => {
   try {
     const response = await fetch('/api/health');
-    return response.ok;
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    console.log('Server health check:', data);
+    return true;
   } catch (e) {
+    console.error('Server health check failed:', e);
     return false;
   }
+};
+
+// Wait for server to be ready
+const waitForServer = async (maxAttempts = 10, interval = 2000): Promise<boolean> => {
+  if (isServerStarting) {
+    return new Promise(resolve => {
+      // Check every interval until server responds or max attempts reached
+      let attempts = 0;
+      const checkInterval = setInterval(async () => {
+        attempts++;
+        const isRunning = await checkServerStatus();
+        
+        if (isRunning || attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          isServerStarting = false;
+          resolve(isRunning);
+        }
+      }, interval);
+    });
+  }
+  
+  return checkServerStatus();
 };
 
 // Login function using API
@@ -63,14 +91,25 @@ export const login = async (username: string, password: string): Promise<User> =
     
     if (!isServerRunning && !serverStartAttempted) {
       serverStartAttempted = true;
+      isServerStarting = true;
+      
       toast({
         title: "Iniciando servidor",
         description: "Aguarde enquanto o servidor é iniciado automaticamente...",
         variant: "default"
       });
       
-      // Wait a moment for server to start
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for server to start
+      const serverReady = await waitForServer();
+      
+      if (!serverReady) {
+        toast({
+          title: "Servidor não iniciou",
+          description: "Tente recarregar a página ou verifique os logs do console.",
+          variant: "destructive"
+        });
+        throw new Error('Server failed to start');
+      }
     }
     
     const response = await fetch('/api/auth/login', {

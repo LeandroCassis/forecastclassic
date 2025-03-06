@@ -4,6 +4,7 @@ import ProductHeader from '@/components/ProductHeader';
 import FilterComponent from '@/components/FilterComponent';
 import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 
 interface Produto {
@@ -32,6 +33,19 @@ const LoadingPlaceholder = () => <div className="space-y-12">
       </div>)}
   </div>;
 
+const ServerStarting = () => {
+  return (
+    <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 my-4 text-center">
+      <h2 className="text-xl font-semibold mb-2">Servidor Iniciando</h2>
+      <p className="mb-4">O servidor está sendo iniciado automaticamente. Aguarde alguns instantes...</p>
+      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
+      </div>
+      <p className="mt-4 text-sm text-gray-500">A página será atualizada automaticamente.</p>
+    </div>
+  );
+};
+
 const Index = () => {
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
@@ -39,6 +53,46 @@ const Index = () => {
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [serverReady, setServerReady] = useState(false);
+  const [autoRefreshAttempts, setAutoRefreshAttempts] = useState(0);
+
+  const { data: serverStatus, isLoading: checkingServer, isError: serverError } = useQuery({
+    queryKey: ['server_health'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/health');
+        if (!response.ok) throw new Error('Server not responding');
+        
+        const text = await response.text();
+        try {
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            throw new Error('Server starting');
+          }
+          const data = JSON.parse(text);
+          setServerReady(true);
+          return data;
+        } catch (e) {
+          throw new Error('Invalid server response');
+        }
+      } catch (error) {
+        console.error('Server health check failed:', error);
+        return null;
+      }
+    },
+    retry: 2,
+    retryDelay: 3000
+  });
+
+  useEffect(() => {
+    if ((serverError || !serverReady) && autoRefreshAttempts < 5) {
+      const timer = setTimeout(() => {
+        setAutoRefreshAttempts(prev => prev + 1);
+        window.location.reload();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [serverError, serverReady, autoRefreshAttempts]);
 
   const {
     data: produtos,
@@ -49,11 +103,30 @@ const Index = () => {
     queryFn: async () => {
       console.log('Fetching produtos from Azure SQL...');
       const response = await fetch('/api/produtos');
+      
       if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
-      console.log('Fetched produtos:', data);
-      return data as Produto[];
+      
+      const text = await response.text();
+      try {
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          toast({
+            title: "Servidor iniciando",
+            description: "Aguarde enquanto o servidor é iniciado...",
+            variant: "default"
+          });
+          throw new Error('Server starting');
+        }
+        const data = JSON.parse(text);
+        console.log('Fetched produtos:', data);
+        return data as Produto[];
+      } catch (e) {
+        if (e.message === 'Server starting') {
+          throw e;
+        }
+        throw new Error(`Failed to parse response: ${e.message}`);
+      }
     },
+    enabled: serverReady,
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
     refetchOnMount: false,
@@ -138,6 +211,22 @@ const Index = () => {
     }
     return pages;
   };
+
+  if (serverError || !serverReady) {
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-[95%] mx-auto py-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4 py-[3px]">
+          <div className="flex justify-between items-center">
+            <h1 className="uppercase text-black text-3xl font-normal">
+              S&OP GRUPO CLASSIC
+            </h1>
+            <UserHeader />
+          </div>
+        </div>
+        <ServerStarting />
+      </div>
+    </div>;
+  }
 
   if (error) {
     return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">

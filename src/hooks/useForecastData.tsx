@@ -1,8 +1,7 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 
-// Helper function to safely parse JSON
+// Helper function to safely parse JSON with HTML detection
 const safeJsonParse = async (response: Response) => {
   const text = await response.text();
   try {
@@ -10,20 +9,48 @@ const safeJsonParse = async (response: Response) => {
     if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
       console.error('Received HTML instead of JSON:', text.substring(0, 100));
       toast({
-        title: "Erro de conexão",
-        description: "O servidor parece não estar online. Por favor, verifique se 'npm start' foi executado para iniciar o servidor.",
-        variant: "destructive"
+        title: "Servidor iniciando",
+        description: "O servidor está iniciando. Por favor, aguarde alguns segundos. A página será atualizada automaticamente.",
+        variant: "default"
       });
-      throw new Error('Servidor não está online. Execute "npm start" para iniciar o servidor.');
+      
+      // Auto refresh after 5 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 5000);
+      
+      throw new Error('Servidor iniciando. Aguarde alguns segundos.');
     }
     return JSON.parse(text);
   } catch (error) {
+    if (error.message === 'Servidor iniciando. Aguarde alguns segundos.') {
+      throw error;
+    }
     console.error('JSON parse error:', error, 'Response was:', text.substring(0, 200));
     throw error;
   }
 };
 
 export const useForecastData = (produto: string) => {
+  // First, check if server is running
+  const { data: serverStatus, isError: serverError } = useQuery({
+    queryKey: ['server_health'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/health');
+        if (!response.ok) throw new Error('Server not responding');
+        return safeJsonParse(response);
+      } catch (error) {
+        console.error('Server health check failed:', error);
+        // Auto refresh after delay
+        setTimeout(() => window.location.reload(), 5000);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 3000
+  });
+
   // Product data query
   const { data: productData, isError: productError } = useQuery({
     queryKey: ['product', produto],
@@ -37,6 +64,7 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    enabled: !serverError,
     staleTime: Infinity, // Data won't become stale
     gcTime: Infinity, // Keep in cache indefinitely
     retry: 1
@@ -55,6 +83,7 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    enabled: !serverError,
     staleTime: Infinity,
     gcTime: Infinity,
     retry: 1
@@ -87,6 +116,7 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
+    enabled: !serverError,
     staleTime: Infinity,
     gcTime: Infinity,
     retry: 1
@@ -118,20 +148,21 @@ export const useForecastData = (produto: string) => {
         throw error;
       }
     },
-    enabled: !!productData?.codigo,
+    enabled: !!productData?.codigo && !serverError,
     staleTime: Infinity,
     gcTime: Infinity,
     retry: 1
   });
 
-  const hasErrors = productError || gruposError || configError || forecastError;
+  const hasErrors = serverError || productError || gruposError || configError || forecastError;
 
   return {
     productData,
     grupos,
     monthConfigurations,
     forecastValues,
-    hasErrors
+    hasErrors,
+    serverStatus
   };
 };
 
