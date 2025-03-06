@@ -1,3 +1,4 @@
+
 -- Tabela de produtos
 CREATE TABLE produtos (
     codigo varchar(50) PRIMARY KEY,
@@ -48,4 +49,30 @@ CREATE TABLE forecast_values (
     PRIMARY KEY (produto_codigo, ano, id_tipo, mes),
     FOREIGN KEY (produto_codigo) REFERENCES produtos(codigo),
     FOREIGN KEY (ano, id_tipo) REFERENCES grupos(ano, id_tipo)
+);
+
+-- Tabela de usuários
+CREATE TABLE usuarios (
+    id int IDENTITY(1,1) PRIMARY KEY,
+    username nvarchar(100) NOT NULL UNIQUE,
+    password_hash nvarchar(255) NOT NULL,
+    nome nvarchar(100),
+    role nvarchar(50) DEFAULT 'user',
+    created_at datetime DEFAULT GETDATE(),
+    last_login datetime
+);
+
+-- Tabela de logs de alterações nos valores do forecast
+CREATE TABLE forecast_values_log (
+    id int IDENTITY(1,1) PRIMARY KEY,
+    produto_codigo varchar(50) NOT NULL,
+    ano int NOT NULL,
+    id_tipo int NOT NULL,
+    mes varchar(3) NOT NULL,
+    valor_anterior decimal(18,2),
+    valor_novo decimal(18,2) NOT NULL,
+    user_id int,
+    username varchar(100),
+    modified_at datetime DEFAULT GETDATE(),
+    FOREIGN KEY (produto_codigo) REFERENCES produtos(codigo)
 );

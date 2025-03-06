@@ -1,4 +1,6 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getCurrentUser } from '@/services/authService';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -14,6 +16,10 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
       valor: number 
     }) => {
       if (!productCodigo) throw new Error('Product code not found');
+      
+      // Get current user
+      const currentUser = getCurrentUser();
+      if (!currentUser) throw new Error('User not authenticated');
 
       const response = await fetch(`${API_URL}/forecast-values`, {
         method: 'POST',
@@ -25,7 +31,9 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           ano,
           id_tipo,
           mes,
-          valor
+          valor,
+          userId: currentUser.id,
+          username: currentUser.username
         }),
       });
 
