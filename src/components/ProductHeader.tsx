@@ -25,10 +25,10 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
       <div className="flex justify-between text-xs">
         <div className="text-center">
           <div className="font-semibold text-gray-500 mb-0.5 rounded-none">PRODUTO</div>
-          <div className="text-black text-sm">{produto}</div>
+          <div className="text-black text-sm py-0">{produto}</div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">COD PRODUTO</div>
+          <div className="font-semibold text-gray-500 mb-0.5 ">COD PRODUTO</div>
           <div className="text-black text-sm">{productData?.codigo || '-'}</div>
         </div>
         <div className="text-center">
