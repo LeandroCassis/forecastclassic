@@ -13,13 +13,15 @@ app.use(express.json());
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'FORECAST',  // Alterado de VESPERTTINE para FORECAST
+    database: 'FORECAST',  // Using FORECAST database
     user: 'vesperttine',
     password: '840722aA',
     options: {
         encrypt: true,
         trustServerCertificate: false,
-        enableArithAbort: true
+        enableArithAbort: true,
+        connectionTimeout: 30000,  // Added timeout
+        requestTimeout: 30000     // Added request timeout
     },
     pool: {
         max: 10,
@@ -239,32 +241,42 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// Get product by name
-app.get('/api/produtos/:produto', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM produtos WHERE produto = @p0',
-            [req.params.produto]
-        );
-        res.json(data[0]);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
 // Get all produtos for filtering
 app.get('/api/produtos', async (req, res) => {
     try {
         console.log('Fetching produtos from Azure SQL...');
         const data = await query(
-            'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
+            'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM FORECAST.dbo.produtos'
         );
         console.log(`Found ${data.length} produtos`);
         res.json(data);
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching produtos:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
+    }
+});
+
+// Get product by name
+app.get('/api/produtos/:produto', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT * FROM FORECAST.dbo.produtos WHERE produto = @p0',
+            [req.params.produto]
+        );
+        if (data.length === 0) {
+            res.status(404).json({ error: 'Product not found' });
+            return;
+        }
+        res.json(data[0]);
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
     }
 });
 

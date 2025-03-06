@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 const API_URL = '/api';
@@ -9,9 +8,9 @@ export const fetchFromApi = async (endpoint: string) => {
     const response = await fetch(`${API_URL}${endpoint}`);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API error (${response.status}):`, errorText);
-      throw new Error(`Network response was not ok: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error(`API error (${response.status}):`, errorData);
+      throw new Error(errorData.details || errorData.error || `Network response was not ok: ${response.status}`);
     }
     
     return await response.json();
