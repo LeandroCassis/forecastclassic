@@ -44,30 +44,26 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
-// Get API base URL
-const getApiBaseUrl = () => {
-  // For development environment, use the local server directly
-  if (window.location.hostname === 'localhost') {
-    return 'http://localhost:3005';
-  }
-  
-  // For production, use the relative path which will be handled by the proxy
-  return '';
-};
-
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    const apiBaseUrl = getApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+    // For local development, use the full URL to the backend
+    // For production, use the relative path that will be handled by the proxy
+    const isLocalhost = window.location.hostname === 'localhost';
+    const apiUrl = isLocalhost 
+      ? 'http://localhost:3005/api/auth/login'
+      : '/api/auth/login';
+    
+    console.log('Using API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
-      // Add these options to ensure credentials are included and no caching
       credentials: 'include',
       cache: 'no-cache',
     });
