@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
@@ -41,7 +42,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           valor,
           userId: currentUser.id,
           username: currentUser.username,
-          userFullName: currentUser.name
+          userFullName: currentUser.nome // Changed from name to nome to match User interface
         }),
       });
 
