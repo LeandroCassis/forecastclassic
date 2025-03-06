@@ -293,10 +293,10 @@ app.get('/api/forecast-values/:productCode', async (req, res) => {
 // Update forecast value
 app.post('/api/forecast-values', async (req, res) => {
     try {
-        const { productCodigo, ano, id_tipo, mes, valor, userId, username } = req.body;
+        const { productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName } = req.body;
         
         console.log('Updating forecast value:', {
-            productCodigo, ano, id_tipo, mes, valor, userId, username
+            productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName
         });
         
         // Get the current value before updating
@@ -309,29 +309,38 @@ app.post('/api/forecast-values', async (req, res) => {
         
         console.log('Previous value:', valorAnterior);
         
-        // Update or insert the forecast value
+        // Format the current date/time in SQL Server format
+        const currentDateTime = new Date().toISOString();
+        
+        // Update or insert the forecast value with user data and timestamp
         await query(
             `MERGE INTO forecast_values AS target
-             USING (VALUES (@p0, @p1, @p2, @p3, @p4)) 
-             AS source (produto_codigo, ano, id_tipo, mes, valor)
+             USING (VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)) 
+             AS source (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
              ON target.produto_codigo = source.produto_codigo 
              AND target.ano = source.ano 
              AND target.id_tipo = source.id_tipo 
              AND target.mes = source.mes
              WHEN MATCHED THEN
-               UPDATE SET valor = source.valor
+               UPDATE SET 
+                  valor = source.valor,
+                  user_id = source.user_id,
+                  username = source.username,
+                  user_fullname = source.user_fullname,
+                  modified_at = source.modified_at
              WHEN NOT MATCHED THEN
-               INSERT (produto_codigo, ano, id_tipo, mes, valor)
-               VALUES (source.produto_codigo, source.ano, source.id_tipo, source.mes, source.valor);`,
-            [productCodigo, ano, id_tipo, mes, valor]
+               INSERT (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
+               VALUES (source.produto_codigo, source.ano, source.id_tipo, source.mes, source.valor, 
+                       source.user_id, source.username, source.user_fullname, source.modified_at);`,
+            [productCodigo, ano, id_tipo, mes, valor, userId || null, username || null, userFullName || null, currentDateTime]
         );
         
         // Log the change
         await query(
             `INSERT INTO forecast_values_log 
-             (produto_codigo, ano, id_tipo, mes, valor_anterior, valor_novo, user_id, username, modified_at)
-             VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, GETDATE())`,
-            [productCodigo, ano, id_tipo, mes, valorAnterior, valor, userId || null, username || null]
+             (produto_codigo, ano, id_tipo, mes, valor_anterior, valor_novo, user_id, username, user_fullname, modified_at)
+             VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9)`,
+            [productCodigo, ano, id_tipo, mes, valorAnterior, valor, userId || null, username || null, userFullName || null, currentDateTime]
         );
         
         console.log('Successfully updated forecast value and logged the change');

@@ -1,6 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
+import { toast } from '@/hooks/use-toast';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -42,18 +43,29 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           mes,
           valor,
           userId: currentUser.id,
-          username: currentUser.username
+          username: currentUser.username,
+          userFullName: currentUser.name
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Server error response:', errorText);
+        toast({
+          title: "Erro ao atualizar valor",
+          description: `Falha ao salvar dados: ${errorText}`,
+          variant: "destructive"
+        });
         throw new Error(`Network response was not ok: ${errorText}`);
       }
       
       const result = await response.json();
       console.log('Update result:', result);
+      toast({
+        title: "Valor atualizado",
+        description: "O valor foi salvo com sucesso",
+        variant: "default"
+      });
       return result;
     },
     onSuccess: () => {
