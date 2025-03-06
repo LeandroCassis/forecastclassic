@@ -7,26 +7,68 @@ import crypto from 'crypto';
 const app = express();
 const port = 3005;
 
-// Configure CORS to accept requests from all origins
+// Configurar CORS para aceitar solicitações de qualquer origem com configurações mais abrangentes
 app.use(cors({
-  origin: function(origin, callback) {
-    callback(null, true); // Allow any origin
-  },
-  credentials: true
+  origin: '*', // Permitir qualquer origem de forma explícita
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 
-// Parse JSON request bodies
-app.use(express.json());
+// Adicionar middleware para tratar solicitações OPTIONS (preflight CORS)
+app.options('*', cors());
+
+// Parse JSON request bodies com configurações adicionais
+app.use(express.json({
+  limit: '10mb', // Aumentar o limite do tamanho do corpo
+  strict: false, // Ser menos rigoroso com o formato JSON
+  verify: (req, res, buf) => { 
+    try {
+      JSON.parse(buf);
+    } catch (e) {
+      console.error('Invalid JSON in request:', e);
+      // Continuamos processando mesmo com JSON inválido
+    }
+  }
+}));
 
 // Log all requests
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-// Configurar middleware para garantir resposta JSON em todas as rotas API
+// Middleware para garantir respostas JSON corretas em todas as rotas API
 app.use('/api', (req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
+  // Defina os cabeçalhos antes de qualquer outro processamento
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  
+  // Intercepta o método json() para garantir que as respostas são enviadas corretamente
+  const originalJson = res.json;
+  res.json = function(body) {
+    let jsonBody = body;
+    
+    // Se não for uma string, tenta converter para JSON
+    if (typeof body !== 'string') {
+      try {
+        jsonBody = JSON.stringify(body);
+      } catch (e) {
+        console.error('Error stringifying JSON response:', e);
+        jsonBody = JSON.stringify({ error: 'Error processing response' });
+      }
+    }
+    
+    // Garante que o Content-Type seja definido novamente
+    this.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    // Envia o corpo da resposta
+    this.send(jsonBody);
+    return this;
+  };
+  
   next();
 });
 
@@ -312,28 +354,28 @@ app.post('/api/auth/login', async (req, res) => {
             [user.id]
         );
         
-        // Send user data without sensitive information
+        // Construir dados do usuário sem informações sensíveis
         const userData = {
             id: user.id,
             username: user.username,
-            nome: user.nome,
-            role: user.role
+            nome: user.nome || '',
+            role: user.role || 'user'
         };
         
-        console.log('Login successful for user:', username);
+        console.log('Login successful for user:', username, 'Data:', userData);
         
-        // Garantir que o cabeçalho Content-Type esteja configurado corretamente
-        res.setHeader('Content-Type', 'application/json');
-        return res.json(userData);
+        // Configurar cabeçalhos explicitamente e enviar resposta como JSON
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(200).send(JSON.stringify(userData));
     } catch (err) {
         console.error('Login error:', err);
         
         // Garantir que erros também sejam retornados como JSON
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(500).json({ 
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(500).send(JSON.stringify({ 
             error: 'Internal server error',
             details: err.message 
-        });
+        }));
     }
 });
 
@@ -489,7 +531,7 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
 
 // Start server
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running at http://localhost:${port} at ${new Date().toISOString()}`);
     
     // Initialize database on server start
     initializeDatabase()
