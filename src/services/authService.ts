@@ -11,6 +11,24 @@ export interface User {
 // Store the current authenticated user
 let currentUser: User | null = null;
 
+// Mock user database for testing
+const mockUsers = [
+  {
+    id: 1,
+    username: 'admin',
+    name: 'Administrador',
+    role: 'admin',
+    password: 'admin'
+  },
+  {
+    id: 2,
+    username: 'leandro.assis@grupoclassic.com.br',
+    name: 'Leandro Assis',
+    role: 'user',
+    password: '840722aA'
+  }
+];
+
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
   if (currentUser) return true;
@@ -44,23 +62,26 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
-// Login function
+// Mock login function instead of API call
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    const response = await fetch('http://localhost:3001/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Falha ao realizar login');
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Find user in mock database
+    const user = mockUsers.find(u => u.username === username && u.password === password);
+    
+    if (!user) {
+      throw new Error('Usuário ou senha inválidos');
     }
-
-    const userData = await response.json();
+    
+    // Create a sanitized user object without the password
+    const userData: User = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role
+    };
     
     // Store user info in localStorage and memory
     localStorage.setItem('user', JSON.stringify(userData));
