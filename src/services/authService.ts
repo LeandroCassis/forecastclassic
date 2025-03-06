@@ -1,9 +1,10 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
   id: number;
   username: string;
-  name: string;
+  nome: string;
   role: string;
 }
 
@@ -55,7 +56,12 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      throw new Error('Login failed');
+      if (response.status === 404) {
+        throw new Error('Serviço de autenticação não encontrado. Verifique sua conexão com o servidor.');
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(errorData.error || `Erro no login: ${response.status}`);
+      }
     }
 
     const user = await response.json();
@@ -66,7 +72,11 @@ export const login = async (username: string, password: string): Promise<User> =
     
     return user;
   } catch (error) {
-    toast({ title: 'Login failed', description: error.message });
+    toast({ 
+      title: 'Erro no login', 
+      description: error.message || 'Não foi possível conectar ao servidor', 
+      variant: "destructive" 
+    });
     throw error;
   }
 };

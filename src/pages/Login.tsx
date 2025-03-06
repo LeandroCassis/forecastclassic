@@ -6,13 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
 import { useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login, isLoggedIn } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Reset error when fields change
+    if (error) setError(null);
+  }, [username, password]);
 
   useEffect(() => {
     // Redirect to home if already logged in
@@ -25,15 +32,12 @@ const LoginPage = () => {
     e.preventDefault();
     
     if (!username.trim() || !password.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha o usuário e senha para continuar",
-        variant: "destructive"
-      });
+      setError("Preencha o usuário e senha para continuar");
       return;
     }
     
     setIsLoading(true);
+    setError(null);
     
     try {
       await login(username, password);
@@ -43,7 +47,8 @@ const LoginPage = () => {
       });
       navigate('/');
     } catch (error) {
-      // Error is already handled in the auth service
+      // Display the error in the form
+      setError(error.message || "Erro ao conectar com o servidor");
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
@@ -58,6 +63,13 @@ const LoginPage = () => {
             <h1 className="text-3xl font-bold">S&OP GRUPO CLASSIC</h1>
             <p className="text-gray-500 mt-2">Faça login para acessar o sistema</p>
           </div>
+          
+          {error && (
+            <div className="bg-red-100 border border-red-200 text-red-800 rounded p-3 mb-4 flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
