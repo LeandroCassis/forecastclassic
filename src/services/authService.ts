@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -47,7 +46,6 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    console.log('Attempting login with:', { username });
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
@@ -57,37 +55,18 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Login response not OK:', response.status, errorText);
-      throw new Error(`Login failed: ${response.status}`);
+      throw new Error('Login failed');
     }
 
-    // Try to parse as JSON
-    let responseData;
-    try {
-      responseData = await response.json();
-    } catch (e) {
-      console.error('Failed to parse login response as JSON:', e);
-      throw new Error('Invalid server response format');
-    }
-    
-    if (!responseData || !responseData.id) {
-      console.error('Invalid user data in response:', responseData);
-      throw new Error('Invalid user data in response');
-    }
+    const user = await response.json();
     
     // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(responseData));
-    currentUser = responseData;
+    localStorage.setItem('user', JSON.stringify(user));
+    currentUser = user;
     
-    return responseData;
+    return user;
   } catch (error) {
-    console.error('Login error details:', error);
-    toast({ 
-      title: 'Login failed', 
-      description: error.message || 'Unable to connect to the server',
-      variant: 'destructive'
-    });
+    toast({ title: 'Login failed', description: error.message });
     throw error;
   }
 };

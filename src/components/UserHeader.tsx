@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +12,7 @@ const UserHeader: React.FC = () => {
     <div className="flex items-center space-x-2 text-sm">
       <div className="flex items-center space-x-1 border rounded-full px-3 py-1 bg-white/90">
         <UserIcon className="h-4 w-4 text-gray-500" />
-        <span>{user.name || user.username}</span>
+        <span>{user.nome}</span>
       </div>
       <Button 
         variant="ghost" 

@@ -1,13 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { fetchFromApi } from '@/services/apiService';
-import { toast } from '@/hooks/use-toast';
+import ForecastTable from '@/components/ForecastTable';
+import ProductHeader from '@/components/ProductHeader';
+import FilterComponent from '@/components/FilterComponent';
 import UserHeader from '@/components/UserHeader';
-import FilterSection from '@/components/FilterSection';
-import PaginationComponent from '@/components/PaginationComponent';
-import ProductList from '@/components/ProductList';
+import { useQuery } from '@tanstack/react-query';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 
 interface Produto {
   codigo: string;
@@ -19,35 +16,29 @@ interface Produto {
   empresa: string;
 }
 
-// Define filter options interface to ensure proper typing
-interface FilterOptions {
-  marcas: string[];
-  fabricas: string[];
-  familia1: string[];
-  familia2: string[];
-  produtos: string[];
-}
-
 const ITEMS_PER_PAGE = 10;
+const MAX_PAGE_LINKS = 5;
+
+const LoadingPlaceholder = () => <div className="space-y-12">
+    {[1, 2, 3].map(i => <div key={i} className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-6 bg-gray-200 rounded w-full"></div>
+            <div className="h-6 bg-gray-200 rounded w-full"></div>
+            <div className="h-6 bg-gray-200 rounded w-full"></div>
+          </div>
+        </div>
+      </div>)}
+  </div>;
 
 const Index = () => {
-  const { user, isLoggedIn } = useAuth();
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
   const [selectedFamilia1, setSelectedFamilia1] = useState<string[]>([]);
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      toast({
-        title: "Login required",
-        description: "Please log in to access this page",
-        variant: "destructive",
-      });
-    }
-  }, [isLoggedIn]);
 
   const {
     data: produtos,
@@ -57,20 +48,17 @@ const Index = () => {
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Azure SQL...');
-      try {
-        return await fetchFromApi('/produtos');
-      } catch (error) {
-        console.error('Error in produtos query:', error);
-        throw error;
-      }
+      const response = await fetch('/api/produtos');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      console.log('Fetched produtos:', data);
+      return data as Produto[];
     },
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: 1,
-    enabled: isLoggedIn
+    refetchOnReconnect: false
   });
 
   useEffect(() => {
@@ -113,97 +101,111 @@ const Index = () => {
       familia2: [],
       produtos: []
     };
-    
-    // Safely cast the arrays with type assertions
-    const allProdutos = produtos as Produto[];
-    
     return {
-      marcas: Array.from(new Set(allProdutos.map(p => p.marca))).sort(),
-      fabricas: Array.from(new Set(allProdutos.map(p => p.fabrica))).sort(),
-      familia1: Array.from(new Set(allProdutos.map(p => p.familia1))).sort(),
-      familia2: Array.from(new Set(allProdutos.map(p => p.familia2))).sort(),
-      produtos: Array.from(new Set(allProdutos.map(p => p.produto))).sort()
+      marcas: Array.from(new Set(produtos.map(p => p.marca))).sort(),
+      fabricas: Array.from(new Set(produtos.map(p => p.fabrica))).sort(),
+      familia1: Array.from(new Set(produtos.map(p => p.familia1))).sort(),
+      familia2: Array.from(new Set(produtos.map(p => p.familia2))).sort(),
+      produtos: Array.from(new Set(produtos.map(p => p.produto))).sort()
     };
   }, [produtos]);
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="max-w-[95%] mx-auto py-6">
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6">
-            <div className="text-center py-8">
-              <h1 className="text-2xl font-semibold mb-4">Login Required</h1>
-              <p>Please log in to access the S&OP dashboard.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const getPaginationItems = (currentPage, totalPages) => {
+    const pages = [];
+    const half = Math.floor(MAX_PAGE_LINKS / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, currentPage + half);
+    if (currentPage - half <= 0) {
+      end = Math.min(totalPages, end + (half - currentPage + 1));
+    }
+    if (currentPage + half > totalPages) {
+      start = Math.max(1, start - (currentPage + half - totalPages));
+    }
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) {
+        pages.push('ellipsis');
+      }
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (end < totalPages) {
+      if (end < totalPages - 1) {
+        pages.push('ellipsis');
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="max-w-[95%] mx-auto py-6">
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-red-100/50 p-6">
-            <div className="text-red-600">Erro ao carregar dados: {(error as Error).message}</div>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            >
-              Tentar Novamente
-            </button>
-          </div>
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-[95%] mx-auto py-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-red-100/50 p-6">
+          <div className="text-red-600">Erro ao carregar dados: {(error as Error).message}</div>
         </div>
       </div>
-    );
+    </div>;
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-[95%] mx-auto py-6">
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4 py-[3px]">
-          <div className="flex justify-between items-center">
-            <h1 className="uppercase text-black text-3xl font-normal">
-              S&OP GRUPO CLASSIC
-            </h1>
-            <UserHeader />
-          </div>
-          
-          <FilterSection 
-            filters={filters}
-            selectedMarcas={selectedMarcas}
-            selectedFabricas={selectedFabricas}
-            selectedFamilia1={selectedFamilia1}
-            selectedFamilia2={selectedFamilia2}
-            selectedProdutos={selectedProdutos}
-            setSelectedMarcas={setSelectedMarcas}
-            setSelectedFabricas={setSelectedFabricas}
-            setSelectedFamilia1={setSelectedFamilia1}
-            setSelectedFamilia2={setSelectedFamilia2}
-            setSelectedProdutos={setSelectedProdutos}
-          />
-          
-          <div className="mt-4">
-            <p className="text-black">
-              {filteredProdutos.length} Produtos Ativos | Página {currentPage} de {totalPages || 1}
-            </p>
-          </div>
+  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="max-w-[95%] mx-auto py-6">
+      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4 py-[3px]">
+        <div className="flex justify-between items-center">
+          <h1 className="uppercase text-black text-3xl font-normal">
+            S&OP GRUPO CLASSIC
+          </h1>
+          <UserHeader />
         </div>
         
-        <ProductList 
-          products={currentProdutos} 
-          isLoading={isLoading} 
-        />
-
-        <PaginationComponent 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          setCurrentPage={setCurrentPage}
-        />
+        <div className="mt-6 grid grid-cols-5 gap-3">
+          <FilterComponent label="Marca" options={filters.marcas} selectedValues={selectedMarcas} onSelectionChange={setSelectedMarcas} />
+          <FilterComponent label="Fábrica" options={filters.fabricas} selectedValues={selectedFabricas} onSelectionChange={setSelectedFabricas} />
+          <FilterComponent label="Família 1" options={filters.familia1} selectedValues={selectedFamilia1} onSelectionChange={setSelectedFamilia1} />
+          <FilterComponent label="Família 2" options={filters.familia2} selectedValues={selectedFamilia2} onSelectionChange={setSelectedFamilia2} />
+          <FilterComponent label="Produto" options={filters.produtos} selectedValues={selectedProdutos} onSelectionChange={setSelectedProdutos} />
+        </div>
+        
+        <div className="mt-4">
+          <p className="text-black">
+            {filteredProdutos.length} Produtos Ativos | Página {currentPage} de {totalPages || 1}
+          </p>
+        </div>
       </div>
+      
+      {isLoading ? <LoadingPlaceholder /> : <>
+          <div className="space-y-12">
+            {currentProdutos.length > 0 ? currentProdutos.map(produto => <div key={produto.produto} className="space-y-0">
+                  <ProductHeader produto={produto.produto} />
+                  <ForecastTable produto={produto.produto} />
+                </div>) : <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 text-center">
+                <p>Nenhum produto encontrado com os filtros selecionados.</p>
+              </div>}
+          </div>
+
+          {totalPages > 1 && <div className="mt-8 mb-4 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} aria-disabled={currentPage === 1} />
+                  </PaginationItem>
+                  
+                  {getPaginationItems(currentPage, totalPages).map((page, index) => <PaginationItem key={index}>
+                      {page === 'ellipsis' ? <PaginationEllipsis /> : <PaginationLink onClick={() => setCurrentPage(Number(page))} isActive={currentPage === page} className="cursor-pointer">
+                          {page}
+                        </PaginationLink>}
+                    </PaginationItem>)}
+                  
+                  <PaginationItem>
+                    <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} aria-disabled={currentPage === totalPages} />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>}
+        </>}
     </div>
-  );
+  </div>;
 };
 
 export default Index;
