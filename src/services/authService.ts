@@ -49,14 +49,12 @@ export const login = async (username: string, password: string): Promise<User> =
   try {
     console.log('Attempting login with username:', username);
     
-    // For local development, use the full URL to the backend
-    // For production, use the relative path that will be handled by the proxy
-    const isLocalhost = window.location.hostname === 'localhost';
-    const apiUrl = isLocalhost 
-      ? 'http://localhost:3005/api/auth/login'
-      : '/api/auth/login';
+    // Use the absolute URL in all environments to avoid proxy issues
+    const apiUrl = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3005/api/auth/login' 
+      : `${window.location.origin}/api/auth/login`;
     
-    console.log('Using API URL:', apiUrl);
+    console.log('Login request to API URL:', apiUrl);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -69,9 +67,16 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Login failed response:', errorData);
+      const errorText = await response.text();
+      console.error('Login failed with status:', response.status);
+      console.error('Response body:', errorText);
       throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      console.error('Invalid content type:', contentType);
+      throw new Error("Login failed: Server did not return JSON data");
     }
 
     const user = await response.json();
