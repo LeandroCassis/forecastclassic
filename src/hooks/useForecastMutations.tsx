@@ -9,6 +9,16 @@ const API_URL = '/api';
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
 
+  // Function to check if server is running
+  const checkServerStatus = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/health`);
+      return response.ok;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: async ({ ano, tipo, id_tipo, mes, valor }: { 
       ano: number, 
@@ -32,6 +42,20 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         valor
       });
 
+      // Check server status first
+      const isServerRunning = await checkServerStatus();
+      
+      if (!isServerRunning) {
+        toast({
+          title: "Servidor iniciando",
+          description: "Aguarde enquanto o servidor é iniciado automaticamente...",
+          variant: "default"
+        });
+        
+        // Wait a moment for server to start
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+
       try {
         const response = await fetch(`${API_URL}/forecast-values`, {
           method: 'POST',
@@ -51,14 +75,24 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Server error response:', errorText);
+          const responseText = await response.text();
+          // Check if we got HTML instead of JSON (server not running)
+          if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+            toast({
+              title: "Servidor iniciando",
+              description: "Aguarde enquanto o servidor é iniciado...",
+              variant: "default"
+            });
+            throw new Error('Server is starting');
+          }
+          
+          console.error('Server error response:', responseText);
           toast({
             title: "Erro ao atualizar valor",
-            description: `Falha ao salvar dados: ${errorText}`,
+            description: `Falha ao salvar dados: ${responseText}`,
             variant: "destructive"
           });
-          throw new Error(`Network response was not ok: ${errorText}`);
+          throw new Error(`Network response was not ok: ${responseText}`);
         }
         
         const result = await response.json();
@@ -70,12 +104,14 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         });
         return result;
       } catch (error) {
-        console.error('Error updating forecast:', error);
-        toast({
-          title: "Erro de conexão",
-          description: "Não foi possível conectar ao servidor. Certifique-se de que 'npm start' foi executado.",
-          variant: "destructive"
-        });
+        if (error.message !== 'Server is starting') {
+          console.error('Error updating forecast:', error);
+          toast({
+            title: "Erro de conexão",
+            description: "Não foi possível conectar ao servidor. Servidor iniciando...",
+            variant: "destructive"
+          });
+        }
         throw error;
       }
     },

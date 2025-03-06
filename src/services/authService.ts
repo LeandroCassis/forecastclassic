@@ -10,6 +10,7 @@ export interface User {
 
 // Store the current authenticated user
 let currentUser: User | null = null;
+let serverStartAttempted = false;
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -44,9 +45,34 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
+// Function to check if server is running
+const checkServerStatus = async (): Promise<boolean> => {
+  try {
+    const response = await fetch('/api/health');
+    return response.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
+    // Check server status first
+    const isServerRunning = await checkServerStatus();
+    
+    if (!isServerRunning && !serverStartAttempted) {
+      serverStartAttempted = true;
+      toast({
+        title: "Iniciando servidor",
+        description: "Aguarde enquanto o servidor é iniciado automaticamente...",
+        variant: "default"
+      });
+      
+      // Wait a moment for server to start
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
@@ -60,10 +86,10 @@ export const login = async (username: string, password: string): Promise<User> =
     if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
       toast({
         title: "Erro de conexão",
-        description: "O servidor não está rodando. Por favor, execute 'npm start' no terminal.",
+        description: "O servidor está iniciando. Por favor, aguarde alguns segundos e tente novamente.",
         variant: "destructive"
       });
-      throw new Error('Server is not running');
+      throw new Error('Server is starting');
     }
 
     // Try to parse JSON response
@@ -73,7 +99,7 @@ export const login = async (username: string, password: string): Promise<User> =
     } catch (e) {
       toast({
         title: "Erro de dados",
-        description: "Resposta inválida do servidor. Por favor, verifique se o servidor está rodando corretamente.",
+        description: "Resposta inválida do servidor. Por favor, aguarde alguns segundos e tente novamente.",
         variant: "destructive"
       });
       throw new Error('Invalid server response');
@@ -89,7 +115,7 @@ export const login = async (username: string, password: string): Promise<User> =
     
     return data;
   } catch (error) {
-    if (error.message !== 'Server is not running' && error.message !== 'Invalid server response') {
+    if (error.message !== 'Server is starting' && error.message !== 'Invalid server response') {
       toast({ 
         title: 'Erro no login', 
         description: error.message,
