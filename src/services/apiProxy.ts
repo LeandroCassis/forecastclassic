@@ -49,7 +49,6 @@ export async function apiRequest<T>(
     },
     credentials: 'include',
     cache: 'no-cache',
-    mode: 'cors'
   };
   
   // Adicionar corpo se necessário
@@ -73,33 +72,71 @@ export async function apiRequest<T>(
       const contentType = response.headers.get('content-type');
       console.log('Content-Type:', contentType);
       
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Server did not return JSON. Content-Type:', contentType);
-        const text = await response.text();
-        console.error('Non-JSON response:', text.substring(0, 500)); // Log parte da resposta para diagnóstico
+      // Handle different response types
+      if (response.status === 204 || response.status === 205) {
+        // No content response
+        return {
+          status: response.status,
+          success: response.ok
+        };
+      }
+      
+      // For successful responses with content
+      if (response.ok) {
+        // Try JSON first
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          return { data, status: response.status, success: true };
+        }
+        
+        // For non-JSON successful responses, provide the text as debug info
+        const textContent = await response.text();
+        console.warn('Non-JSON successful response:', textContent.substring(0, 500));
         
         return {
-          error: 'Server did not return JSON data',
+          error: 'Response is not JSON but request was successful',
+          data: { message: textContent.substring(0, 100) } as any,
+          status: response.status,
+          success: true
+        };
+      }
+      
+      // Handle error responses
+      try {
+        // Try to parse as JSON first
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          return {
+            error: errorData.error || errorData.message || `Error ${response.status}`,
+            status: response.status,
+            success: false
+          };
+        }
+        
+        // Handle non-JSON error responses
+        const errorText = await response.text();
+        console.error(`Non-JSON error response (${response.status}):`, errorText.substring(0, 500));
+        
+        return {
+          error: `Server error: ${response.status}`,
+          status: response.status,
+          success: false
+        };
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        return {
+          error: `Failed to parse server response: ${response.status}`,
           status: response.status,
           success: false
         };
       }
-      
-      // Obter resposta como JSON
-      const data = await response.json();
-      
-      return {
-        data,
-        status: response.status,
-        success: response.ok
-      };
-    } catch (error) {
-      console.error(`Network error (attempt ${attempt})`, error);
+    } catch (networkError) {
+      console.error(`Network error (attempt ${attempt}):`, networkError);
       
       // Na última tentativa, propagar o erro
       if (attempt === maxRetries) {
         return {
-          error: (error as Error).message,
+          error: `Network error: ${(networkError as Error).message}`,
           status: 0, // Código 0 indica erro de rede
           success: false
         };
@@ -119,5 +156,14 @@ export async function apiRequest<T>(
  * Função específica para autenticação que lida com casos especiais
  */
 export async function loginRequest(username: string, password: string) {
-  return apiRequest('/auth/login', 'POST', { username, password }, 3);
+  try {
+    return await apiRequest('/auth/login', 'POST', { username, password }, 3);
+  } catch (error) {
+    console.error('Login request failed:', error);
+    return {
+      error: `Login failed: ${(error as Error).message}`,
+      status: 0,
+      success: false
+    };
+  }
 }

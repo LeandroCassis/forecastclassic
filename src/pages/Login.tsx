@@ -47,7 +47,6 @@ const LoginPage = () => {
       navigate('/');
     } catch (error) {
       setError((error as Error).message);
-      // Error is already handled in the auth service
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
