@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -47,60 +46,27 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    console.log('Attempting login with:', { username, password });
-    
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
-      credentials: 'include',
     });
 
-    console.log('Login response status:', response.status);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Login response error:', errorText);
-      throw new Error('Login failed: ' + errorText);
+      throw new Error('Login failed');
     }
 
-    const responseText = await response.text();
-    console.log('Login response text:', responseText);
-    
-    // Try to parse the response as JSON
-    let user;
-    try {
-      user = JSON.parse(responseText);
-    } catch (e) {
-      console.error('Failed to parse response as JSON:', e);
-      throw new Error('Invalid server response format');
-    }
-    
-    if (!user || !user.id) {
-      throw new Error('Invalid user data received');
-    }
-    
-    // Map the server response to our User interface
-    const userData: User = {
-      id: user.id,
-      username: user.username,
-      name: user.nome || user.name || '',
-      role: user.role || 'user',
-    };
+    const user = await response.json();
     
     // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(userData));
-    currentUser = userData;
+    localStorage.setItem('user', JSON.stringify(user));
+    currentUser = user;
     
-    return userData;
+    return user;
   } catch (error) {
-    console.error('Login error details:', error);
-    toast({ 
-      title: 'Login failed', 
-      description: error.message || 'An error occurred during login' 
-    });
+    toast({ title: 'Login failed', description: error.message });
     throw error;
   }
 };
