@@ -7,13 +7,14 @@ import crypto from 'crypto';
 const app = express();
 const port = 3005;
 
+// Configure middleware before routes
 app.use(cors());
 app.use(express.json());
 
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'FORECAST',  // Alterado de VESPERTTINE para FORECAST
+    database: 'FORECAST',
     user: 'vesperttine',
     password: '840722aA',
     options: {
@@ -62,7 +63,7 @@ async function query(queryString, params) {
     }
 }
 
-// Check if users table exists, create it if not
+// Initialize database and create necessary tables
 async function initializeDatabase() {
     try {
         // Verificar se a tabela usuarios existe
@@ -131,7 +132,7 @@ async function initializeDatabase() {
     }
 }
 
-// Create users if they don't exist
+// Create initial users
 async function createUsers() {
     try {
         const users = [
@@ -173,50 +174,37 @@ initializeDatabase()
     .then(() => createUsers())
     .catch(console.error);
 
-// Authentication endpoint
+// API Routes
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        console.log('=== Login attempt ===');
-        console.log('Username:', username);
-        console.log('Password:', password);
+        console.log('Login attempt:', { username });
         
         if (!username || !password) {
-            console.log('Missing username or password');
-            return res.status(400).json({ error: 'Username and password are required' });
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
         }
         
-        // Query the users table
         const users = await query(
             'SELECT * FROM usuarios WHERE username = @p0',
             [username]
         );
         
-        console.log('Found users:', users);
-        
         if (users.length === 0) {
-            console.log('No user found with username:', username);
-            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
         }
         
         const user = users[0];
-        console.log('Found user:', {
-            id: user.id,
-            username: user.username,
-            password_hash: user.password_hash,
-            role: user.role
-        });
         
-        // Comparação da senha em texto plano
         if (String(password).trim() !== String(user.password_hash).trim()) {
-            console.log('Password mismatch');
-            console.log('Received:', password);
-            console.log('Expected:', user.password_hash);
-            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
         }
-        
-        console.log('Login successful');
         
         // Update last login time
         await query(
@@ -224,6 +212,7 @@ app.post('/api/auth/login', async (req, res) => {
             [user.id]
         );
         
+        // Send user data without sensitive information
         const userData = {
             id: user.id,
             username: user.username,
@@ -231,40 +220,30 @@ app.post('/api/auth/login', async (req, res) => {
             role: user.role
         };
         
-        console.log('Sending user data:', userData);
         res.json(userData);
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: err.message 
+        });
     }
 });
 
-// Get product by name
-app.get('/api/produtos/:produto', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM produtos WHERE produto = @p0',
-            [req.params.produto]
-        );
-        res.json(data[0]);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get all produtos for filtering
+// Product routes
 app.get('/api/produtos', async (req, res) => {
     try {
-        console.log('Fetching produtos from Azure SQL...');
+        console.log('Fetching produtos...');
         const data = await query(
             'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
         );
-        console.log(`Found ${data.length} produtos`);
         res.json(data);
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching produtos:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
     }
 });
 
@@ -288,6 +267,20 @@ app.get('/api/month-configurations', async (req, res) => {
             'SELECT * FROM month_configurations ORDER BY ano, mes'
         );
         res.json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get product by name
+app.get('/api/produtos/:produto', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT * FROM produtos WHERE produto = @p0',
+            [req.params.produto]
+        );
+        res.json(data[0]);
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -387,6 +380,7 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
     }
 });
 
+// Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
