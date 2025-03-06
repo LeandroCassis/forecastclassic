@@ -1,14 +1,17 @@
+
 /**
  * API Proxy para lidar com ambientes específicos como Lovable.dev
  * Este arquivo contém funções para facilitar a comunicação com o backend
  * em diferentes ambientes de execução.
  */
 
+import { toast } from "@/hooks/use-toast";
+
 // Tipos de requisição suportados
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 // Interface para o resultado de uma requisição
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   data?: T;
   error?: string;
   status: number;
@@ -35,6 +38,26 @@ export function getApiBaseUrl(): string {
   } else {
     // Em desenvolvimento local
     return 'http://localhost:3005';
+  }
+}
+
+/**
+ * Função simplificada para verificar se um servidor está ativo
+ */
+export async function checkServerStatus(): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/health`, {
+      method: 'GET',
+      cache: 'no-cache',
+      mode: 'cors',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'text/plain' }
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Server health check failed:', error);
+    return false;
   }
 }
 
@@ -70,6 +93,22 @@ export async function apiRequest<T>(
     options.body = JSON.stringify(body);
   }
   
+  // Verificar se o servidor está ativo antes de realizar a requisição
+  const isServerActive = await checkServerStatus();
+  if (!isServerActive) {
+    toast({
+      title: "Servidor indisponível",
+      description: "O servidor não está respondendo. Verifique se o servidor foi iniciado corretamente.",
+      variant: "destructive"
+    });
+    
+    return {
+      error: "Servidor indisponível",
+      status: 503,
+      success: false
+    };
+  }
+  
   // Realizar tentativas de requisição
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -82,43 +121,51 @@ export async function apiRequest<T>(
       const response = await fetch(url, options);
       console.log(`API Response: ${response.status} from ${url}`);
       
-      // Verificar headers para diagnóstico
-      console.log('Response headers:', 
-        Array.from(response.headers.entries())
-          .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {})
-      );
+      // Verificar cabeçalho Content-Type
+      const contentType = response.headers.get('Content-Type') || '';
+      const isJson = contentType.includes('application/json');
       
-      // Obter resposta como texto primeiro para diagnóstico
-      const responseText = await response.text();
-      console.log('Raw response:', responseText);
-      
-      // Processar resposta
-      if (responseText) {
-        try {
-          // Tentar converter para JSON
-          const data = JSON.parse(responseText);
-          
-          return {
-            data,
-            status: response.status,
-            success: response.ok
-          };
-        } catch (e) {
-          console.error('Failed to parse response as JSON:', e);
-          
-          // Se não for JSON, retornar o texto como erro
-          return {
-            error: responseText,
-            status: response.status,
-            success: false
-          };
-        }
-      } else {
-        // Resposta vazia
+      if (!isJson) {
+        console.warn(`Response is not JSON (${contentType})`);
+        
+        // Se resposta não é JSON, retornar como erro
+        const responseText = await response.text();
         return {
+          error: `Resposta do servidor não é JSON válido: ${responseText.substring(0, 100)}...`,
           status: response.status,
-          success: response.ok,
-          error: response.ok ? undefined : 'Empty response'
+          success: false
+        };
+      }
+      
+      // Processar resposta JSON
+      const responseText = await response.text();
+      
+      // Verificar se a resposta está vazia
+      if (!responseText.trim()) {
+        return {
+          error: "Resposta vazia do servidor",
+          status: response.status,
+          success: false
+        };
+      }
+      
+      try {
+        // Tentar converter para JSON
+        const data = JSON.parse(responseText);
+        
+        return {
+          data,
+          status: response.status,
+          success: response.ok
+        };
+      } catch (e) {
+        console.error('Failed to parse response as JSON:', e);
+        
+        // Se não for JSON, retornar o texto como erro
+        return {
+          error: `Erro ao processar resposta: ${responseText.substring(0, 100)}...`,
+          status: response.status,
+          success: false
         };
       }
     } catch (error) {

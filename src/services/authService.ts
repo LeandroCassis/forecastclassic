@@ -1,5 +1,6 @@
 
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "./apiProxy";
 
 export interface User {
   id: number;
@@ -8,55 +9,32 @@ export interface User {
   role: string;
 }
 
-// API base URL helper
-const getApiBaseUrl = (): string => {
-  return window.location.hostname === 'localhost' ? 'http://localhost:3005' : '';
-};
-
-// Direct API call for authentication
+// Direct API call for authentication with simplified error handling
 export const loginUser = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ username, password }),
-      credentials: 'include'
-    });
-
-    console.log('Login response status:', response.status);
+    const { data, error, success, status } = await apiRequest<User>(
+      '/api/auth/login', 
+      'POST', 
+      { username, password }
+    );
     
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Login error response:', error);
-      throw new Error(`Login failed: ${response.status} ${error || 'Unknown error'}`);
-    }
-    
-    // Try to parse the response as JSON
-    let userData: User;
-    const responseText = await response.text();
-    
-    try {
-      userData = JSON.parse(responseText);
-    } catch (e) {
-      console.error('Failed to parse login response as JSON:', e, 'Response was:', responseText);
-      throw new Error('Invalid response format from server');
-    }
-    
-    // Validate the user data
-    if (!userData || typeof userData !== 'object' || !userData.id || !userData.username) {
-      console.error('Invalid user data received:', userData);
-      throw new Error('Invalid user data received from server');
+    if (!success || !data) {
+      const errorMessage = error || 'Falha na autenticação';
+      console.error('Login failed:', errorMessage);
+      toast({ 
+        title: 'Erro no login', 
+        description: errorMessage,
+        variant: 'destructive'
+      });
+      throw new Error(errorMessage);
     }
     
     // Store user in localStorage
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(data));
     
-    return userData;
+    return data;
   } catch (error) {
     console.error('Login process error:', error);
     toast({ 

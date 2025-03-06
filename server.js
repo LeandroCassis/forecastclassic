@@ -39,8 +39,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  res.status(200).send('OK');
+});
+
 // Middleware para garantir respostas JSON corretas em todas as rotas API
 app.use('/api', (req, res, next) => {
+  // Skip health check endpoint
+  if (req.path === '/health') {
+    return next();
+  }
+  
   // Defina os cabeçalhos antes de qualquer outro processamento
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -310,7 +321,7 @@ setInterval(() => {
 
 // API Routes
 
-// Authentication endpoint
+// Authentication endpoint with simplified response handling
 app.post('/api/auth/login', async (req, res) => {
     try {
         console.log('Login attempt received:', req.body);
@@ -364,9 +375,8 @@ app.post('/api/auth/login', async (req, res) => {
         
         console.log('Login successful for user:', username, 'Data:', userData);
         
-        // Configurar cabeçalhos explicitamente e enviar resposta como JSON
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.status(200).send(JSON.stringify(userData));
+        // Enviar resposta como JSON simplificado para evitar problemas de parseamento
+        res.status(200).json(userData);
     } catch (err) {
         console.error('Login error:', err);
         
