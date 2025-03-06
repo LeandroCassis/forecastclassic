@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
@@ -44,7 +44,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           valor,
           userId: currentUser.id,
           username: currentUser.username,
-          userFullName: currentUser.name
+          userFullName: currentUser.nome
         }),
       });
 
