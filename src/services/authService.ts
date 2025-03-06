@@ -44,15 +44,24 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
+// Function to get API base URL
+const getApiBaseUrl = (): string => {
+  // For local development
+  if (window.location.hostname === 'localhost') {
+    return 'http://localhost:3005';
+  }
+  
+  // For production - use relative path to leverage proxy
+  return '';
+};
+
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    // Use the absolute URL in all environments to avoid proxy issues
-    const apiUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3005/api/auth/login' 
-      : `${window.location.origin}/api/auth/login`;
+    const baseUrl = getApiBaseUrl();
+    const apiUrl = `${baseUrl}/api/auth/login`;
     
     console.log('Login request to API URL:', apiUrl);
     
@@ -60,6 +69,7 @@ export const login = async (username: string, password: string): Promise<User> =
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({ username, password }),
       credentials: 'include',

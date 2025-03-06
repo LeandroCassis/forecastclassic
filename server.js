@@ -1,3 +1,4 @@
+
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
@@ -7,9 +8,22 @@ import crypto from 'crypto';
 const app = express();
 const port = 3005;
 
-// Configure middleware before routes
-app.use(cors());
+// Configure CORS to accept requests from all origins
+app.use(cors({
+  origin: function(origin, callback) {
+    callback(null, true); // Allow any origin
+  },
+  credentials: true
+}));
+
+// Parse JSON request bodies
 app.use(express.json());
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 
 // Database configuration
 const config = {
@@ -246,32 +260,40 @@ setInterval(() => {
 }, 60000); // Run every minute
 
 // API Routes
+
+// Authentication endpoint - made more robust
 app.post('/api/auth/login', async (req, res) => {
     try {
+        console.log('Login attempt received:', req.body);
+        
         const { username, password } = req.body;
         
-        console.log('Login attempt:', { username });
-        
         if (!username || !password) {
+            console.log('Missing credentials');
             return res.status(400).json({ 
                 error: 'Username and password are required' 
             });
         }
         
+        console.log('Finding user:', username);
         const users = await query(
             'SELECT * FROM usuarios WHERE username = @p0',
             [username]
         );
         
         if (users.length === 0) {
+            console.log('User not found:', username);
             return res.status(401).json({ 
                 error: 'Invalid username or password' 
             });
         }
         
         const user = users[0];
+        console.log('User found:', user.username);
         
+        // Simple password check (comparing directly)
         if (String(password).trim() !== String(user.password_hash).trim()) {
+            console.log('Invalid password for user:', username);
             return res.status(401).json({ 
                 error: 'Invalid username or password' 
             });
@@ -291,6 +313,8 @@ app.post('/api/auth/login', async (req, res) => {
             role: user.role
         };
         
+        console.log('Login successful for user:', username);
+        res.setHeader('Content-Type', 'application/json');
         res.json(userData);
     } catch (err) {
         console.error('Login error:', err);
@@ -454,4 +478,9 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
+    
+    // Initialize database on server start
+    initializeDatabase()
+        .then(() => createUsers())
+        .catch(console.error);
 });
