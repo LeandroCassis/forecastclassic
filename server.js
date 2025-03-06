@@ -1,4 +1,3 @@
-
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
@@ -32,16 +31,17 @@ const config = {
 let pool = null;
 
 async function getConnection() {
-    if (!pool) {
-        try {
+    try {
+        if (!pool) {
+            console.log('Connecting to Azure SQL Database...');
             pool = await new mssql.ConnectionPool(config).connect();
-            console.log('Successfully connected to database');
-        } catch (err) {
-            console.error('Database connection error:', err);
-            throw err;
+            console.log('Successfully connected to Azure SQL Database');
         }
+        return pool;
+    } catch (err) {
+        console.error('Database connection error:', err);
+        throw err;
     }
-    return pool;
 }
 
 async function query(queryString, params) {
@@ -53,6 +53,7 @@ async function query(queryString, params) {
                 request.input(`p${index}`, param);
             });
         }
+        console.log('Executing query:', queryString, 'with params:', params);
         const result = await request.query(queryString);
         return result.recordset;
     } catch (error) {
@@ -128,6 +129,9 @@ async function initializeDatabase() {
             console.log('Created forecast_values_log table');
         }
         
+        // Test the database connection
+        const testResult = await query('SELECT TOP 1 * FROM usuarios');
+        console.log('Database test result:', testResult);
     } catch (error) {
         console.error('Error initializing database:', error);
     }
@@ -140,6 +144,8 @@ initializeDatabase().catch(console.error);
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
+        
+        console.log('Login attempt for user:', username);
         
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password are required' });
@@ -157,14 +163,29 @@ app.post('/api/auth/login', async (req, res) => {
             [username, hashedPassword]
         );
         
-        // Fallback to admin/admin if database connection fails
+        console.log('User query result:', users);
+        
+        // Fallback to admin/admin if database connection fails or no user found
         if (users.length === 0) {
             if (username === 'admin' && password === 'admin') {
-                // Update last login time
-                await query(
-                    'UPDATE usuarios SET last_login = GETDATE() WHERE username = @p0',
-                    [username]
-                ).catch(err => console.error('Error updating last login:', err));
+                // Try to create the admin user in the database
+                try {
+                    const adminPasswordHash = crypto
+                        .createHash('sha256')
+                        .update('admin')
+                        .digest('hex');
+                    
+                    await query(
+                        `IF NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'admin')
+                         INSERT INTO usuarios (username, password_hash, nome, role)
+                         VALUES (@p0, @p1, @p2, @p3)`,
+                        ['admin', adminPasswordHash, 'Administrador', 'admin']
+                    );
+                    
+                    console.log('Created admin user in database');
+                } catch (err) {
+                    console.error('Failed to create admin user:', err);
+                }
                 
                 return res.json({
                     id: 1,
@@ -192,6 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
             role: user.role || 'user'
         };
         
+        console.log('User successfully logged in:', userData);
         res.json(userData);
     } catch (error) {
         console.error('Login error:', error);
@@ -273,6 +295,10 @@ app.post('/api/forecast-values', async (req, res) => {
     try {
         const { productCodigo, ano, id_tipo, mes, valor, userId, username } = req.body;
         
+        console.log('Updating forecast value:', {
+            productCodigo, ano, id_tipo, mes, valor, userId, username
+        });
+        
         // Get the current value before updating
         const currentValues = await query(
             'SELECT valor FROM forecast_values WHERE produto_codigo = @p0 AND ano = @p1 AND id_tipo = @p2 AND mes = @p3',
@@ -280,6 +306,8 @@ app.post('/api/forecast-values', async (req, res) => {
         );
         
         const valorAnterior = currentValues.length > 0 ? currentValues[0].valor : null;
+        
+        console.log('Previous value:', valorAnterior);
         
         // Update or insert the forecast value
         await query(
@@ -306,10 +334,11 @@ app.post('/api/forecast-values', async (req, res) => {
             [productCodigo, ano, id_tipo, mes, valorAnterior, valor, userId || null, username || null]
         );
         
+        console.log('Successfully updated forecast value and logged the change');
         res.json({ success: true });
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error updating forecast value:', error);
+        res.status(500).json({ error: `Internal server error: ${error.message}` });
     }
 });
 

@@ -47,6 +47,7 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
+    // Use the direct Azure SQL connection string in the API request
     const response = await fetch('http://localhost:3001/api/auth/login', {
       method: 'POST',
       headers: {
@@ -66,8 +67,10 @@ export const login = async (username: string, password: string): Promise<User> =
     localStorage.setItem('user', JSON.stringify(userData));
     currentUser = userData;
     
+    console.log('Login successful:', userData);
     return userData;
   } catch (error) {
+    console.error('Login error details:', error);
     toast({
       title: "Erro de autenticação",
       description: (error as Error).message || "Falha ao realizar login",
