@@ -1,11 +1,9 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-
 interface ProductHeaderProps {
   produto: string;
 }
-
 const ProductHeader: React.FC<ProductHeaderProps> = ({
   produto
 }) => {
@@ -22,45 +20,44 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
       return data;
     }
   });
-
   return <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl shadow-lg border border-b-0 border-blue-100/50 p-4 pb-3">
       <div className=" flex justify-between text-[1rem] ">
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5 rounded-none">PRODUTO</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">PRODUTO</div>
           <div className="text-black text-sm py-0">{produto}</div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5 ">COD PRODUTO</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">COD PRODUTO</div>
           <div className="text-black text-sm">{productData?.codigo || '-'}</div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">FOB</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">FOB</div>
           <div className="text-black text-sm">
             {productData?.moedafob && productData?.fob ? `${productData.moedafob} ${productData.fob.toFixed(2)}` : '-'}
           </div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">FÁBRICA</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">FÁBRICA</div>
           <div className="text-black text-sm">{productData?.fabrica || '-'}</div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">MARCA</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">MARCA</div>
           <div className="text-black text-sm">{productData?.marca || '-'}</div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">PREÇO VENDA</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">PREÇO VENDA</div>
           <div className="text-black text-sm">
             {productData?.preco_venda ? `R$ ${productData.preco_venda.toFixed(2)}` : '-'}
           </div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">ATUALIZAÇÃO FOB</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">ATUALIZAÇÃO FOB</div>
           <div className="text-black text-sm">
             {productData?.data_atualizacao_fob ? format(new Date(productData.data_atualizacao_fob), 'dd/MM/yyyy') : '-'}
           </div>
         </div>
         <div className="text-center">
-          <div className="font-semibold text-gray-500 mb-0.5">ESTOQUE ATUAL</div>
+          <div className="font-semibold text-black -500 mb-0.5 rounded-none">ESTOQUE ATUAL</div>
           <div className="text-black text-sm">
             {productData?.estoque != null ? productData.estoque.toFixed(2) : '-'}
           </div>
@@ -68,5 +65,4 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
       </div>
     </div>;
 };
-
 export default ProductHeader;
