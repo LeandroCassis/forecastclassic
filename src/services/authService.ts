@@ -12,6 +12,8 @@ export interface User {
 let currentUser: User | null = null;
 let serverStartAttempted = false;
 let isServerStarting = false;
+let autoRefreshCount = 0;
+const MAX_AUTO_REFRESH = 3;
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -52,17 +54,28 @@ const checkServerStatus = async (): Promise<boolean> => {
     const response = await fetch('/api/health');
     if (!response.ok) return false;
     
-    const data = await response.json();
-    console.log('Server health check:', data);
-    return true;
+    // Check if we got HTML instead of JSON (server not running)
+    const responseText = await response.text();
+    if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+      return false;
+    }
+    
+    try {
+      const data = JSON.parse(responseText);
+      console.log('Server health check:', data);
+      return true;
+    } catch (e) {
+      console.error('Invalid JSON in health check:', e);
+      return false;
+    }
   } catch (e) {
     console.error('Server health check failed:', e);
     return false;
   }
 };
 
-// Wait for server to be ready
-const waitForServer = async (maxAttempts = 10, interval = 2000): Promise<boolean> => {
+// Wait for server to be ready with limited retries
+const waitForServer = async (maxAttempts = 5, interval = 2000): Promise<boolean> => {
   if (isServerStarting) {
     return new Promise(resolve => {
       // Check every interval until server responds or max attempts reached
@@ -99,13 +112,13 @@ export const login = async (username: string, password: string): Promise<User> =
         variant: "default"
       });
       
-      // Wait for server to start
-      const serverReady = await waitForServer();
+      // Wait for server to start with limited attempts
+      const serverReady = await waitForServer(5, 2000);
       
       if (!serverReady) {
         toast({
           title: "Servidor não iniciou",
-          description: "Tente recarregar a página ou verifique os logs do console.",
+          description: "O servidor não respondeu em tempo hábil. Verifique o console para mais detalhes.",
           variant: "destructive"
         });
         throw new Error('Server failed to start');
@@ -169,4 +182,18 @@ export const login = async (username: string, password: string): Promise<User> =
 export const logout = (): void => {
   localStorage.removeItem('user');
   currentUser = null;
+};
+
+// Reset the auto-refresh counter
+export const resetAutoRefresh = (): void => {
+  autoRefreshCount = 0;
+};
+
+// Try to auto-refresh, but with a limit
+export const shouldAutoRefresh = (): boolean => {
+  if (autoRefreshCount < MAX_AUTO_REFRESH) {
+    autoRefreshCount++;
+    return true;
+  }
+  return false;
 };

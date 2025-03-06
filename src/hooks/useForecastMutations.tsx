@@ -1,6 +1,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCurrentUser } from '@/services/authService';
+import { getCurrentUser, shouldAutoRefresh } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 
 // Use relative path for API calls to go through the proxy
@@ -13,7 +13,20 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
   const checkServerStatus = async (): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/health`);
-      return response.ok;
+      if (!response.ok) return false;
+      
+      // Verify we got a proper JSON response, not HTML
+      const text = await response.text();
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        return false;
+      }
+      
+      try {
+        JSON.parse(text);
+        return true;
+      } catch (e) {
+        return false;
+      }
     } catch (e) {
       return false;
     }
@@ -52,8 +65,28 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           variant: "default"
         });
         
-        // Wait a moment for server to start
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait a moment for server to start (with backoff)
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Check server again after waiting
+        const serverRunningAfterWait = await checkServerStatus();
+        if (!serverRunningAfterWait) {
+          if (shouldAutoRefresh()) {
+            toast({
+              title: "Recarregando página",
+              description: "Servidor ainda não está pronto. Recarregando página...",
+              variant: "default"
+            });
+            setTimeout(() => window.location.reload(), 2000);
+          } else {
+            toast({
+              title: "Servidor não disponível",
+              description: "O servidor não está respondendo após várias tentativas. Recarregue a página manualmente.",
+              variant: "destructive"
+            });
+          }
+          throw new Error('Server not running after waiting');
+        }
       }
 
       try {
@@ -95,7 +128,16 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
           throw new Error(`Network response was not ok: ${responseText}`);
         }
         
-        const result = await response.json();
+        // Verify JSON response
+        const text = await response.text();
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch (e) {
+          console.error('Invalid JSON response:', text);
+          throw new Error('Invalid server response');
+        }
+        
         console.log('Update result:', result);
         toast({
           title: "Valor atualizado",

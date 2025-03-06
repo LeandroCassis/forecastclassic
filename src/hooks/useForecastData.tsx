@@ -1,5 +1,7 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { shouldAutoRefresh } from '@/services/authService';
 
 // Helper function to safely parse JSON with HTML detection
 const safeJsonParse = async (response: Response) => {
@@ -10,14 +12,22 @@ const safeJsonParse = async (response: Response) => {
       console.error('Received HTML instead of JSON:', text.substring(0, 100));
       toast({
         title: "Servidor iniciando",
-        description: "O servidor está iniciando. Por favor, aguarde alguns segundos. A página será atualizada automaticamente.",
+        description: "O servidor está iniciando. Por favor, aguarde alguns segundos.",
         variant: "default"
       });
       
-      // Auto refresh after 5 seconds
-      setTimeout(() => {
-        window.location.reload();
-      }, 5000);
+      // Limited auto refresh based on counter
+      if (shouldAutoRefresh()) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
+      } else {
+        toast({
+          title: "Limite de tentativas",
+          description: "O servidor não respondeu após várias tentativas. Tente recarregar manualmente a página.",
+          variant: "destructive"
+        });
+      }
       
       throw new Error('Servidor iniciando. Aguarde alguns segundos.');
     }
@@ -42,12 +52,14 @@ export const useForecastData = (produto: string) => {
         return safeJsonParse(response);
       } catch (error) {
         console.error('Server health check failed:', error);
-        // Auto refresh after delay
-        setTimeout(() => window.location.reload(), 5000);
+        // Limited auto refresh
+        if (shouldAutoRefresh()) {
+          setTimeout(() => window.location.reload(), 10000);
+        }
         throw error;
       }
     },
-    retry: 2,
+    retry: 1,
     retryDelay: 3000
   });
 

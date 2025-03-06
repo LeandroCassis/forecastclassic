@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
       
       // Start the server with a delay to ensure port is free
       setTimeout(() => {
+        // Using direct node command instead of npm script
         const serverProcess = spawn('node', ['server.js'], {
           stdio: 'inherit',
           shell: true,

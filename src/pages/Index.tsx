@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
@@ -6,6 +7,7 @@ import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
+import { resetAutoRefresh, shouldAutoRefresh } from '@/services/authService';
 
 interface Produto {
   codigo: string;
@@ -19,6 +21,7 @@ interface Produto {
 
 const ITEMS_PER_PAGE = 10;
 const MAX_PAGE_LINKS = 5;
+const MAX_REFRESH_ATTEMPTS = 5;
 
 const LoadingPlaceholder = () => <div className="space-y-12">
     {[1, 2, 3].map(i => <div key={i} className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6">
@@ -33,7 +36,7 @@ const LoadingPlaceholder = () => <div className="space-y-12">
       </div>)}
   </div>;
 
-const ServerStarting = () => {
+const ServerStarting = ({ attempts }) => {
   return (
     <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6 my-4 text-center">
       <h2 className="text-xl font-semibold mb-2">Servidor Iniciando</h2>
@@ -41,7 +44,11 @@ const ServerStarting = () => {
       <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
         <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
       </div>
-      <p className="mt-4 text-sm text-gray-500">A página será atualizada automaticamente.</p>
+      <p className="mt-4 text-sm text-gray-500">
+        {attempts < MAX_REFRESH_ATTEMPTS 
+          ? "A página será atualizada automaticamente." 
+          : "Várias tentativas foram feitas. Tente recarregar manualmente a página."}
+      </p>
     </div>
   );
 };
@@ -55,6 +62,11 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [serverReady, setServerReady] = useState(false);
   const [autoRefreshAttempts, setAutoRefreshAttempts] = useState(0);
+
+  // Reset auto-refresh counter when component mounts
+  useEffect(() => {
+    resetAutoRefresh();
+  }, []);
 
   const { data: serverStatus, isLoading: checkingServer, isError: serverError } = useQuery({
     queryKey: ['server_health'],
@@ -79,16 +91,31 @@ const Index = () => {
         return null;
       }
     },
-    retry: 2,
+    retry: 1,
     retryDelay: 3000
   });
 
+  // Handle auto-refresh with backoff
   useEffect(() => {
-    if ((serverError || !serverReady) && autoRefreshAttempts < 5) {
+    if ((serverError || !serverReady) && autoRefreshAttempts < MAX_REFRESH_ATTEMPTS) {
+      // Increase delay with each attempt (backoff strategy)
+      const delay = Math.min(3000 + (autoRefreshAttempts * 2000), 15000);
+      
+      console.log(`Server not ready, attempt ${autoRefreshAttempts + 1}/${MAX_REFRESH_ATTEMPTS}. Will retry in ${delay/1000}s`);
+      
       const timer = setTimeout(() => {
         setAutoRefreshAttempts(prev => prev + 1);
-        window.location.reload();
-      }, 5000);
+        
+        if (shouldAutoRefresh()) {
+          window.location.reload();
+        } else {
+          toast({
+            title: "Limite de tentativas",
+            description: "O servidor não respondeu após várias tentativas. Tente recarregar manualmente a página.",
+            variant: "destructive"
+          });
+        }
+      }, delay);
       
       return () => clearTimeout(timer);
     }
@@ -134,10 +161,12 @@ const Index = () => {
     refetchOnReconnect: false
   });
 
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
 
+  // Scroll to top when page changes
   useEffect(() => {
     window.scrollTo({
       top: 0,
@@ -223,7 +252,16 @@ const Index = () => {
             <UserHeader />
           </div>
         </div>
-        <ServerStarting />
+        <ServerStarting attempts={autoRefreshAttempts} />
+        
+        <div className="mt-4 text-center">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Recarregar Página
+          </button>
+        </div>
       </div>
     </div>;
   }
@@ -233,6 +271,14 @@ const Index = () => {
       <div className="max-w-[95%] mx-auto py-6">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-red-100/50 p-6">
           <div className="text-red-600">Erro ao carregar dados: {(error as Error).message}</div>
+          <div className="mt-4">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Tentar Novamente
+            </button>
+          </div>
         </div>
       </div>
     </div>;
