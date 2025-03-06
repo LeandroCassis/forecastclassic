@@ -1,31 +1,28 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle } from 'lucide-react';
+import { useEffect } from 'react';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { login, isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Redirect to home if already logged in
     if (isLoggedIn) {
-      console.log("User is already logged in, redirecting to home");
       navigate('/');
     }
   }, [isLoggedIn, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     
     if (!username.trim() || !password.trim()) {
       toast({
@@ -39,30 +36,15 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
-      console.log('Attempting login with credentials:', username);
-      
-      // Add a small delay to ensure UI updates
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
       await login(username, password);
-      console.log('Login successful, navigating to home');
-      
       toast({
         title: "Login realizado com sucesso",
         description: "Bem-vindo ao sistema de S&OP"
       });
-      
       navigate('/');
     } catch (error) {
-      console.error('Login error in component:', error);
-      const errorMessage = (error as Error).message || 'Erro desconhecido durante o login';
-      setError(errorMessage);
-      
-      toast({
-        title: "Erro no login",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      // Error is already handled in the auth service
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -76,16 +58,6 @@ const LoginPage = () => {
             <h1 className="text-3xl font-bold">S&OP GRUPO CLASSIC</h1>
             <p className="text-gray-500 mt-2">Faça login para acessar o sistema</p>
           </div>
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 flex items-start">
-              <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="font-medium">Erro no login</div>
-                <div className="text-sm">{error}</div>
-              </div>
-            </div>
-          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">

@@ -39,12 +39,36 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware to ensure consistent JSON responses for all API routes
-app.use((req, res, next) => {
-  // Set headers before any other processing
+// Middleware para garantir respostas JSON corretas em todas as rotas API
+app.use('/api', (req, res, next) => {
+  // Defina os cabeçalhos antes de qualquer outro processamento
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
+  
+  // Intercepta o método json() para garantir que as respostas são enviadas corretamente
+  const originalJson = res.json;
+  res.json = function(body) {
+    let jsonBody = body;
+    
+    // Se não for uma string, tenta converter para JSON
+    if (typeof body !== 'string') {
+      try {
+        jsonBody = JSON.stringify(body);
+      } catch (e) {
+        console.error('Error stringifying JSON response:', e);
+        jsonBody = JSON.stringify({ error: 'Error processing response' });
+      }
+    }
+    
+    // Garante que o Content-Type seja definido novamente
+    this.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    // Envia o corpo da resposta
+    this.send(jsonBody);
+    return this;
+  };
+  
   next();
 });
 
@@ -340,18 +364,21 @@ app.post('/api/auth/login', async (req, res) => {
         
         console.log('Login successful for user:', username, 'Data:', userData);
         
-        // Enviar resposta como JSON
-        res.status(200).json(userData);
+        // Configurar cabeçalhos explicitamente e enviar resposta como JSON
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(200).send(JSON.stringify(userData));
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ 
+        
+        // Garantir que erros também sejam retornados como JSON
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(500).send(JSON.stringify({ 
             error: 'Internal server error',
             details: err.message 
-        });
+        }));
     }
 });
 
-// Remaining API Routes
 // Product routes
 app.get('/api/produtos', async (req, res) => {
     try {

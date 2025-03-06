@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import ForecastTable from '@/components/ForecastTable';
 import ProductHeader from '@/components/ProductHeader';
@@ -6,8 +5,6 @@ import FilterComponent from '@/components/FilterComponent';
 import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
-import { toast } from '@/hooks/use-toast';
-import { apiRequest } from '@/services/apiProxy';
 
 interface Produto {
   codigo: string;
@@ -51,22 +48,11 @@ const Index = () => {
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Azure SQL...');
-      try {
-        const response = await apiRequest<Produto[]>('/api/produtos');
-        if (!response.success) {
-          throw new Error(response.error || 'Failed to fetch products');
-        }
-        console.log('Fetched produtos:', response.data);
-        return response.data as Produto[];
-      } catch (err) {
-        console.error('Error fetching produtos:', err);
-        toast({
-          title: "Erro ao carregar produtos",
-          description: `${err}`,
-          variant: "destructive"
-        });
-        throw err;
-      }
+      const response = await fetch('/api/produtos');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      console.log('Fetched produtos:', data);
+      return data as Produto[];
     },
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
@@ -158,12 +144,6 @@ const Index = () => {
       <div className="max-w-[95%] mx-auto py-6">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-red-100/50 p-6">
           <div className="text-red-600">Erro ao carregar dados: {(error as Error).message}</div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            Tentar novamente
-          </button>
         </div>
       </div>
     </div>;

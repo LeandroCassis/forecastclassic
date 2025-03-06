@@ -1,6 +1,4 @@
-
 import { useQuery } from '@tanstack/react-query';
-import { toast } from "@/hooks/use-toast";
 
 export const useForecastData = (produto: string) => {
   // Product data query
@@ -10,27 +8,9 @@ export const useForecastData = (produto: string) => {
       try {
         const response = await fetch(`/api/produtos/${encodeURIComponent(produto)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        
-        // Check if response is HTML
-        const contentType = response.headers.get('content-type') || '';
-        const text = await response.text();
-        const isHtml = text.trim().startsWith('<!DOCTYPE') || 
-                      text.trim().startsWith('<html') || 
-                      contentType.includes('text/html');
-        
-        if (isHtml) {
-          console.error('Received HTML instead of JSON for product data');
-          throw new Error('Invalid response format (HTML)');
-        }
-        
-        return JSON.parse(text);
+        return await response.json();
       } catch (error) {
         console.error('Exception in product fetch:', error);
-        toast({
-          title: "Erro ao carregar produto",
-          description: `${error}`,
-          variant: "destructive"
-        });
         throw error;
       }
     },
@@ -46,27 +26,9 @@ export const useForecastData = (produto: string) => {
       try {
         const response = await fetch('/api/grupos');
         if (!response.ok) throw new Error('Network response was not ok');
-        
-        // Check if response is HTML
-        const contentType = response.headers.get('content-type') || '';
-        const text = await response.text();
-        const isHtml = text.trim().startsWith('<!DOCTYPE') || 
-                      text.trim().startsWith('<html') || 
-                      contentType.includes('text/html');
-        
-        if (isHtml) {
-          console.error('Received HTML instead of JSON for grupos data');
-          throw new Error('Invalid response format (HTML)');
-        }
-        
-        return JSON.parse(text);
+        return await response.json();
       } catch (error) {
         console.error('Exception in grupos fetch:', error);
-        toast({
-          title: "Erro ao carregar grupos",
-          description: `${error}`,
-          variant: "destructive"
-        });
         throw error;
       }
     },
@@ -82,20 +44,7 @@ export const useForecastData = (produto: string) => {
       try {
         const response = await fetch('/api/month-configurations');
         if (!response.ok) throw new Error('Network response was not ok');
-        
-        // Check if response is HTML
-        const contentType = response.headers.get('content-type') || '';
-        const text = await response.text();
-        const isHtml = text.trim().startsWith('<!DOCTYPE') || 
-                      text.trim().startsWith('<html') || 
-                      contentType.includes('text/html');
-        
-        if (isHtml) {
-          console.error('Received HTML instead of JSON for month configurations');
-          throw new Error('Invalid response format (HTML)');
-        }
-        
-        const data = JSON.parse(text);
+        const data = await response.json();
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
         
         data.forEach((config: any) => {
@@ -112,11 +61,6 @@ export const useForecastData = (produto: string) => {
         return configByYear;
       } catch (error) {
         console.error('Exception in month configurations fetch:', error);
-        toast({
-          title: "Erro ao carregar configurações de meses",
-          description: `${error}`,
-          variant: "destructive"
-        });
         throw error;
       }
     },
@@ -134,20 +78,7 @@ export const useForecastData = (produto: string) => {
       try {
         const response = await fetch(`/api/forecast-values/${encodeURIComponent(productData.codigo)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        
-        // Check if response is HTML
-        const contentType = response.headers.get('content-type') || '';
-        const text = await response.text();
-        const isHtml = text.trim().startsWith('<!DOCTYPE') || 
-                      text.trim().startsWith('<html') || 
-                      contentType.includes('text/html');
-        
-        if (isHtml) {
-          console.error('Received HTML instead of JSON for forecast values');
-          throw new Error('Invalid response format (HTML)');
-        }
-        
-        const data = JSON.parse(text);
+        const data = await response.json();
         
         const transformedData: { [key: string]: { [key: string]: number } } = {};
         data.forEach((row: any) => {
@@ -161,11 +92,6 @@ export const useForecastData = (produto: string) => {
         return transformedData;
       } catch (error) {
         console.error('Exception in forecast values fetch:', error);
-        toast({
-          title: "Erro ao carregar valores de forecast",
-          description: `${error}`,
-          variant: "destructive"
-        });
         throw error;
       }
     },
