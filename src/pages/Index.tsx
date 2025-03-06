@@ -5,7 +5,6 @@ import FilterComponent from '@/components/FilterComponent';
 import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
-
 interface Produto {
   codigo: string;
   produto: string;
@@ -15,10 +14,8 @@ interface Produto {
   familia2: string;
   empresa: string;
 }
-
 const ITEMS_PER_PAGE = 10;
 const MAX_PAGE_LINKS = 5;
-
 const LoadingPlaceholder = () => <div className="space-y-12">
     {[1, 2, 3].map(i => <div key={i} className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg p-6">
         <div className="animate-pulse">
@@ -31,7 +28,6 @@ const LoadingPlaceholder = () => <div className="space-y-12">
         </div>
       </div>)}
   </div>;
-
 const Index = () => {
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
@@ -39,7 +35,6 @@ const Index = () => {
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-
   const {
     data: produtos,
     isLoading,
@@ -60,18 +55,15 @@ const Index = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
   });
-
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
-
   useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
   }, [currentPage]);
-
   const getFilteredProducts = (allProducts: Produto[] | null, marcas: string[], fabricas: string[], familia1: string[], familia2: string[], produtos: string[]) => {
     if (!allProducts) return [];
     return allProducts.filter(produto => {
@@ -83,16 +75,13 @@ const Index = () => {
       return matchesMarca && matchesFabrica && matchesFamilia1 && matchesFamilia2 && matchesProduto;
     });
   };
-
   const filteredProdutos = useMemo(() => {
     return getFilteredProducts(produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos);
   }, [produtos, selectedMarcas, selectedFabricas, selectedFamilia1, selectedFamilia2, selectedProdutos]);
-
   const totalPages = Math.ceil((filteredProdutos?.length || 0) / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProdutos?.length || 0);
   const currentProdutos = filteredProdutos?.slice(startIndex, endIndex) || [];
-
   const filters = useMemo(() => {
     if (!produtos) return {
       marcas: [],
@@ -109,7 +98,6 @@ const Index = () => {
       produtos: Array.from(new Set(produtos.map(p => p.produto))).sort()
     };
   }, [produtos]);
-
   const getPaginationItems = (currentPage, totalPages) => {
     const pages = [];
     const half = Math.floor(MAX_PAGE_LINKS / 2);
@@ -138,7 +126,6 @@ const Index = () => {
     }
     return pages;
   };
-
   if (error) {
     return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-[95%] mx-auto py-6">
@@ -148,12 +135,11 @@ const Index = () => {
       </div>
     </div>;
   }
-
   return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
     <div className="max-w-[95%] mx-auto py-6">
       <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6 mb-4 py-[3px]">
         <div className="flex justify-between items-center">
-          <h1 className="uppercase text-black text-3xl font-normal">
+          <h1 className="uppercase text-black font-normal text-2xl">
             S&OP GRUPO CLASSIC
           </h1>
           <UserHeader />
@@ -207,5 +193,4 @@ const Index = () => {
     </div>
   </div>;
 };
-
 export default Index;
