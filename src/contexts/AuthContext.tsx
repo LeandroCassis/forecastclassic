@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, isAuthenticated, getCurrentUser, login, logout } from '@/services/authService';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const loggedInUser = await login(username, password);
       setUser(loggedInUser);
+      toast({
+        title: "Login realizado com sucesso",
+        description: `Bem vindo, ${loggedInUser.name || loggedInUser.username}!`
+      });
+    } catch (error) {
+      console.error('Login error in context:', error);
+      // Error is already handled in the auth service
     } finally {
       setLoading(false);
     }
@@ -49,6 +57,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleLogout = () => {
     logout();
     setUser(null);
+    toast({
+      title: "Logout realizado",
+      description: "Você foi desconectado com sucesso"
+    });
   };
 
   return (
