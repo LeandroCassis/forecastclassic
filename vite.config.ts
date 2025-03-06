@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -15,8 +14,8 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         secure: false,
         ws: true,
-        // Don't rewrite the path to remove /api, our server handles /api prefix
-        rewrite: (path) => path,
+        // Important: Keep this path as is, the server handles the /api prefix
+        rewrite: (path) => path
       }
     }
   },

@@ -1,3 +1,4 @@
+
 /**
  * API Proxy para lidar com ambientes específicos como Lovable.dev
  * Este arquivo contém funções para facilitar a comunicação com o backend
@@ -19,23 +20,8 @@ interface ApiResponse<T> {
  * Determina a URL base da API com base no ambiente atual
  */
 export function getApiBaseUrl(): string {
-  // Verificar se estamos em ambiente de produção (como Lovable.dev)
-  const isProduction = window.location.hostname !== 'localhost' && 
-                       window.location.hostname !== '127.0.0.1';
-  
-  // Verificar se estamos especificamente no Lovable.dev
-  const isLovableDev = window.location.hostname.includes('lovable.dev');
-  
-  if (isLovableDev) {
-    // No Lovable.dev, é importante usar o próprio domínio como base
-    return '';
-  } else if (isProduction) {
-    // Em outros ambientes de produção
-    return '';
-  } else {
-    // Em desenvolvimento local
-    return 'http://localhost:3005';
-  }
+  // No ambiente de desenvolvimento Lovable o endpoint da API é relativo
+  return '/api';
 }
 
 /**
@@ -47,8 +33,9 @@ export async function apiRequest<T>(
   body?: any,
   maxRetries: number = 2
 ): Promise<ApiResponse<T>> {
-  const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}${endpoint}`;
+  // Garantir que o endpoint começa com / se necessário
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${getApiBaseUrl()}${normalizedEndpoint}`;
   
   // Log verboso da requisição para diagnóstico
   console.log(`API Request: ${method} ${url}`, body ? { body } : '');
@@ -82,45 +69,30 @@ export async function apiRequest<T>(
       const response = await fetch(url, options);
       console.log(`API Response: ${response.status} from ${url}`);
       
-      // Verificar headers para diagnóstico
-      console.log('Response headers:', 
-        Array.from(response.headers.entries())
-          .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {})
-      );
+      // Verificar o content type da resposta
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
       
-      // Obter resposta como texto primeiro para diagnóstico
-      const responseText = await response.text();
-      console.log('Raw response:', responseText);
-      
-      // Processar resposta
-      if (responseText) {
-        try {
-          // Tentar converter para JSON
-          const data = JSON.parse(responseText);
-          
-          return {
-            data,
-            status: response.status,
-            success: response.ok
-          };
-        } catch (e) {
-          console.error('Failed to parse response as JSON:', e);
-          
-          // Se não for JSON, retornar o texto como erro
-          return {
-            error: responseText,
-            status: response.status,
-            success: false
-          };
-        }
-      } else {
-        // Resposta vazia
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Server did not return JSON. Content-Type:', contentType);
+        const text = await response.text();
+        console.error('Non-JSON response:', text.substring(0, 500)); // Log parte da resposta para diagnóstico
+        
         return {
+          error: 'Server did not return JSON data',
           status: response.status,
-          success: response.ok,
-          error: response.ok ? undefined : 'Empty response'
+          success: false
         };
       }
+      
+      // Obter resposta como JSON
+      const data = await response.json();
+      
+      return {
+        data,
+        status: response.status,
+        success: response.ok
+      };
     } catch (error) {
       console.error(`Network error (attempt ${attempt})`, error);
       
@@ -147,5 +119,5 @@ export async function apiRequest<T>(
  * Função específica para autenticação que lida com casos especiais
  */
 export async function loginRequest(username: string, password: string) {
-  return apiRequest('/api/auth/login', 'POST', { username, password }, 3);
+  return apiRequest('/auth/login', 'POST', { username, password }, 3);
 }

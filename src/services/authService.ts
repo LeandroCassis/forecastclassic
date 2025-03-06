@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 import { loginRequest } from "./apiProxy";
 
@@ -90,7 +91,8 @@ export const login = async (username: string, password: string): Promise<User> =
     console.error('Login error:', error);
     toast({ 
       title: 'Login falhou', 
-      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação'
+      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação',
+      variant: 'destructive'
     });
     throw error;
   }
