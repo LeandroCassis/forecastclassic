@@ -1,10 +1,6 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
-
-// Base API URL - must match what's in authService.ts
-const API_URL = 'http://localhost:3005/api';
 
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
@@ -32,7 +28,7 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         valor
       });
 
-      const response = await fetch(`${API_URL}/forecast-values`, {
+      const response = await fetch('/api/forecast-values', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

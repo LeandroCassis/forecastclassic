@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -10,9 +9,6 @@ export interface User {
 
 // Store the current authenticated user
 let currentUser: User | null = null;
-
-// Base API URL - this should match the Express server port
-const API_URL = 'http://localhost:3005/api';
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -50,9 +46,9 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    console.log('Attempting login to:', `${API_URL}/auth/login`);
+    console.log('Attempting login...');
     
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
