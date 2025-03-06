@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -46,9 +47,14 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    console.log('Attempting login...');
+    console.log('Attempting login with username:', username);
     
-    const response = await fetch('/api/auth/login', {
+    // Use the complete URL to avoid proxy issues in development
+    const API_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3005/api' 
+      : '/api';
+    
+    const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,8 +79,8 @@ export const login = async (username: string, password: string): Promise<User> =
   } catch (error) {
     console.error('Login error:', error);
     toast({ 
-      title: 'Login failed', 
-      description: error.message || 'Failed to connect to the authentication server'
+      title: 'Login falhou', 
+      description: error.message || 'Falha ao conectar com o servidor de autenticação'
     });
     throw error;
   }

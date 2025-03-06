@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -12,6 +13,8 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target: 'http://localhost:3005',
         changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path,
       }
     }
   },

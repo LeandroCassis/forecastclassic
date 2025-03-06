@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
@@ -28,7 +29,12 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         valor
       });
 
-      const response = await fetch('/api/forecast-values', {
+      // Use the complete URL to avoid proxy issues in development
+      const API_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3005/api' 
+        : '/api';
+
+      const response = await fetch(`${API_URL}/forecast-values`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
