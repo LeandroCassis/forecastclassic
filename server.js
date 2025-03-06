@@ -131,8 +131,46 @@ async function initializeDatabase() {
     }
 }
 
+// Create users if they don't exist
+async function createUsers() {
+    try {
+        const users = [
+            { username: 'rogerio.bousas', password: 'Rogerio123', nome: 'Rogério Bousas', role: 'user' },
+            { username: 'marco.bousas', password: 'Marco123', nome: 'Marco Bousas', role: 'user' },
+            { username: 'sulamita.nascimento', password: 'Sulamita123', nome: 'Sulamita Nascimento', role: 'user' },
+            { username: 'elisangela.tavares', password: 'Elisangela123', nome: 'Elisangela Tavares', role: 'user' },
+            { username: 'pedro.hoffmann', password: 'Pedro123', nome: 'Pedro Hoffmann', role: 'user' },
+            { username: 'guilherme.maia', password: 'Guilherme123', nome: 'Guilherme Maia', role: 'user' }
+        ];
+
+        for (const user of users) {
+            // Check if user exists
+            const existingUser = await query(
+                'SELECT id FROM usuarios WHERE username = @p0',
+                [user.username]
+            );
+
+            if (existingUser.length === 0) {
+                // Create user if doesn't exist
+                await query(`
+                    INSERT INTO usuarios (username, password_hash, nome, role)
+                    VALUES (@p0, @p1, @p2, @p3)
+                `, [user.username, user.password, user.nome, user.role]);
+                
+                console.log(`Created user: ${user.username}`);
+            } else {
+                console.log(`User ${user.username} already exists`);
+            }
+        }
+        console.log('Finished creating users');
+    } catch (error) {
+        console.error('Error creating users:', error);
+    }
+}
+
 // Initialize database on server start
 initializeDatabase()
+    .then(() => createUsers())
     .catch(console.error);
 
 // Authentication endpoint
