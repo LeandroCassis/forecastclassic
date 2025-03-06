@@ -1,4 +1,5 @@
 import { toast } from "@/hooks/use-toast";
+import { loginRequest } from "./apiProxy";
 
 export interface User {
   id: number;
@@ -48,85 +49,48 @@ export const login = async (username: string, password: string): Promise<User> =
   try {
     console.log('Attempting login with username:', username);
     
-    // Always use /api prefix for consistency
-    const apiUrl = '/api/auth/login';
+    // Usar o loginRequest do apiProxy que é mais robusto
+    const response = await loginRequest(username, password);
     
-    console.log('Login request to API URL:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-      credentials: 'include',
-      cache: 'no-cache',
-    });
-
-    if (!response.ok) {
-      // Tentar ler a resposta, independentemente do formato
-      let errorMessage;
-      try {
-        // Primeiro, tenta como JSON
-        const errorData = await response.json();
-        errorMessage = errorData.error || `Erro ${response.status}`;
-      } catch (e) {
-        // Se falhar, tenta como texto
-        try {
-          const errorText = await response.text();
-          errorMessage = errorText || `Erro ${response.status}`;
-        } catch (textError) {
-          // Se ambos falharem, usa o código de status
-          errorMessage = `Erro ${response.status}`;
-        }
-      }
-      
-      console.error('Login failed with status:', response.status);
-      console.error('Error message:', errorMessage);
-      throw new Error(`Login failed: ${errorMessage}`);
-    }
-
-    // Obter o tipo de conteúdo, mas não lançar erro imediato se não for JSON
-    const contentType = response.headers.get("content-type");
-    console.log('Response content type:', contentType);
-    
-    // Tenta analisar como JSON, com fallback para que seja mais robusto
-    let user;
-    try {
-      user = await response.json();
-    } catch (jsonError) {
-      console.error('Failed to parse response as JSON:', jsonError);
-      
-      // Tentar obter o texto e analisar como JSON
-      try {
-        const text = await response.text();
-        console.log('Response text:', text);
-        user = JSON.parse(text);
-      } catch (textError) {
-        console.error('Failed to parse response text as JSON:', textError);
-        throw new Error("Login failed: Server did not return valid user data");
-      }
+    // Verificar se a requisição foi bem-sucedida
+    if (!response.success || !response.data) {
+      const errorMsg = response.error || `Erro ${response.status}`;
+      console.error('Login failed:', errorMsg);
+      throw new Error(`Login failed: ${errorMsg}`);
     }
     
+    const user = response.data;
     console.log('Login successful:', user);
     
     // Verificar se os campos necessários estão presentes
-    if (!user || !user.id || !user.username) {
-      console.error('Invalid user data received:', user);
+    if (!user || typeof user !== 'object') {
+      console.error('Invalid user data received (not an object):', user);
+      throw new Error("Login failed: Invalid user data format received from server");
+    }
+    
+    if (!user.id || !user.username) {
+      console.error('Invalid user data received (missing required fields):', user);
       throw new Error("Login failed: Invalid user data received from server");
     }
     
-    // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(user));
-    currentUser = user;
+    // Garantir que todos os campos estão presentes, mesmo com valores padrão
+    const normalizedUser: User = {
+      id: user.id,
+      username: user.username,
+      nome: user.nome || username, // Use o username se nome estiver ausente
+      role: user.role || 'user'
+    };
     
-    return user;
+    // Store user info in localStorage and memory
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    currentUser = normalizedUser;
+    
+    return normalizedUser;
   } catch (error) {
     console.error('Login error:', error);
     toast({ 
       title: 'Login falhou', 
-      description: error.message || 'Falha ao conectar com o servidor de autenticação'
+      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação'
     });
     throw error;
   }
