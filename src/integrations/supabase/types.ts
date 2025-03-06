@@ -12,32 +12,35 @@ export type Database = {
       forecast_values: {
         Row: {
           ano: number
-          data_registro: string | null
           id: string
           id_tipo: number
           mes: string
-          produto_id: string | null
-          tipo: string
+          produto_codigo: string | null
+          updated_at: string | null
+          updated_by: string | null
+          user_id: string | null
           valor: number
         }
         Insert: {
           ano: number
-          data_registro?: string | null
           id?: string
           id_tipo: number
           mes: string
-          produto_id?: string | null
-          tipo: string
+          produto_codigo?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
           valor: number
         }
         Update: {
           ano?: number
-          data_registro?: string | null
           id?: string
           id_tipo?: number
           mes?: string
-          produto_id?: string | null
-          tipo?: string
+          produto_codigo?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
           valor?: number
         }
         Relationships: [
@@ -49,33 +52,33 @@ export type Database = {
             referencedColumns: ["ano", "id_tipo"]
           },
           {
-            foreignKeyName: "forecast_values_produto_id_fkey"
-            columns: ["produto_id"]
+            foreignKeyName: "forecast_values_produto_codigo_fkey"
+            columns: ["produto_codigo"]
             isOneToOne: false
             referencedRelation: "produtos"
-            referencedColumns: ["id"]
+            referencedColumns: ["codigo"]
           },
         ]
       }
       grupos: {
         Row: {
           ano: number
+          code: string | null
           created_at: string | null
-          id: number
           id_tipo: number
           tipo: string
         }
         Insert: {
           ano: number
+          code?: string | null
           created_at?: string | null
-          id?: number
           id_tipo: number
           tipo: string
         }
         Update: {
           ano?: number
+          code?: string | null
           created_at?: string | null
-          id?: number
           id_tipo?: number
           tipo?: string
         }
@@ -86,7 +89,6 @@ export type Database = {
           ano: number
           created_at: string | null
           data: string
-          id: string
           mes: string
           pct_atual: number
           pct_geral: number
@@ -97,7 +99,6 @@ export type Database = {
           ano: number
           created_at?: string | null
           data: string
-          id?: string
           mes: string
           pct_atual: number
           pct_geral: number
@@ -108,7 +109,6 @@ export type Database = {
           ano?: number
           created_at?: string | null
           data?: string
-          id?: string
           mes?: string
           pct_atual?: number
           pct_geral?: number
@@ -128,7 +128,6 @@ export type Database = {
           familia1: string
           familia2: string
           fob: number | null
-          id: string
           indice: number | null
           marca: string
           moedafob: string | null
@@ -146,7 +145,6 @@ export type Database = {
           familia1: string
           familia2: string
           fob?: number | null
-          id?: string
           indice?: number | null
           marca: string
           moedafob?: string | null
@@ -164,7 +162,6 @@ export type Database = {
           familia1?: string
           familia2?: string
           fob?: number | null
-          id?: string
           indice?: number | null
           marca?: string
           moedafob?: string | null

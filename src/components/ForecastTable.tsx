@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ForecastTableRow } from './ForecastTableRow';
 import { useForecastData } from '@/hooks/useForecastData';
@@ -11,11 +11,34 @@ interface ForecastTableProps {
 
 const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
+const LoadingPlaceholder = () => (
+  <div className="bg-white/80 backdrop-blur-lg rounded-b-2xl shadow-lg border border-t-0 border-blue-100/50 p-4 pt-0">
+    <div className="animate-pulse">
+      <div className="h-10 bg-gray-200 rounded w-full mb-4"></div>
+      <div className="space-y-3">
+        <div className="h-8 bg-gray-200 rounded w-full"></div>
+        <div className="h-8 bg-gray-200 rounded w-full"></div>
+        <div className="h-8 bg-gray-200 rounded w-full"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const ForecastTable: React.FC<ForecastTableProps> = React.memo(({ produto }) => {
   const [localValues, setLocalValues] = useState<{ [key: string]: { [key: string]: number } }>({});
   const { productData, grupos, monthConfigurations, forecastValues, hasErrors } = useForecastData(produto);
-  const { updateMutation } = useForecastMutations(productData?.id);
+  const { updateMutation } = useForecastMutations(productData?.codigo);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (hasErrors) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load forecast data. Please try again later.",
+      });
+    }
+  }, [hasErrors, toast]);
 
   const handleValueChange = (ano: number, tipo: string, id_tipo: number, month: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
@@ -39,18 +62,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
     }
   };
 
-  const handleTotalChange = (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
-    console.log('handleTotalChange called with:', { ano, tipo, id_tipo, totalValue });
-    
+  const handleTotalChange = useMemo(() => (ano: number, tipo: string, id_tipo: number, totalValue: string) => {
     const numericTotal = parseInt(totalValue) || 0;
     const yearConfig = monthConfigurations?.[ano] || {};
     
-    if (!yearConfig) {
-      console.log('No month configurations found for year:', ano);
-      return;
-    }
+    if (!yearConfig) return;
 
-    // Calculate sum of realized months
     const key = `${ano}-${id_tipo}`;
     const realizedMonthsTotal = months.reduce((sum, month) => {
       if (yearConfig[month]?.realizado && forecastValues?.[key]?.[month]) {
@@ -59,26 +76,15 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
       return sum;
     }, 0);
 
-    console.log('Realized months total:', realizedMonthsTotal);
-
-    // Calculate remaining amount to distribute
     const remainingTotal = numericTotal - realizedMonthsTotal;
-    console.log('Remaining total to distribute:', remainingTotal);
-
-    // Calculate sum of percentages for unrealized months
     const openMonthsPercentageSum = Object.values(yearConfig)
       .reduce((sum, config) => !config.realizado ? sum + config.pct_atual : sum, 0);
 
-    console.log('Open months percentage sum:', openMonthsPercentageSum);
-
-    // Distribute remaining total across unrealized months
     months.forEach(month => {
       const monthConfig = yearConfig[month];
       if (monthConfig && !monthConfig.realizado) {
         const adjustedPercentage = monthConfig.pct_atual / openMonthsPercentageSum;
         const newValue = Number((remainingTotal * adjustedPercentage).toFixed(1));
-        
-        console.log(`Setting value for ${month}:`, { adjustedPercentage, newValue });
         
         setLocalValues(prev => ({
           ...prev,
@@ -91,40 +97,29 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
         updateMutation.mutate({ ano, tipo, id_tipo, mes: month, valor: newValue });
       }
     });
-  };
+  }, [monthConfigurations, forecastValues, updateMutation]);
 
-  const getValue = (ano: number, id_tipo: number, month: string) => {
+  const getValue = useMemo(() => (ano: number, id_tipo: number, month: string) => {
     const key = `${ano}-${id_tipo}`;
     return localValues[key]?.[month] ?? forecastValues?.[key]?.[month] ?? 0;
-  };
+  }, [localValues, forecastValues]);
 
-  const calculateTotal = (ano: number, id_tipo: number) => {
+  const calculateTotal = useMemo(() => (ano: number, id_tipo: number) => {
     return Math.round(months.reduce((sum, month) => {
       return sum + (getValue(ano, id_tipo, month) || 0);
     }, 0));
-  };
+  }, [getValue]);
 
   if (hasErrors) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to load forecast data. Please try again later.",
-    });
-    return (
-      <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
-        <div className="text-red-500">Error loading data. Please try again later.</div>
-      </div>
-    );
+    return <LoadingPlaceholder />;
   }
 
-  if (!grupos || !monthConfigurations) return (
-    <div className="flex items-center justify-center h-40 bg-white rounded-2xl">
-      <div className="text-slate-500">Carregando dados...</div>
-    </div>
-  );
+  if (!grupos || !monthConfigurations) {
+    return <LoadingPlaceholder />;
+  }
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+    <div className="bg-white/80 backdrop-blur-lg rounded-b-2xl shadow-lg border border-t-0 border-blue-100/50 p-4 pt-0">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -162,6 +157,8 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ produto }) => {
       </div>
     </div>
   );
-};
+});
+
+ForecastTable.displayName = 'ForecastTable';
 
 export default ForecastTable;
