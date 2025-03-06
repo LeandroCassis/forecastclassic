@@ -174,6 +174,77 @@ initializeDatabase()
     .then(() => createUsers())
     .catch(console.error);
 
+// Store online users with timeout
+const onlineUsers = new Map();
+const PRESENCE_TIMEOUT = 2 * 60 * 1000; // 2 minutes in milliseconds
+
+// Presence routes
+app.post('/api/presence/update', (req, res) => {
+  try {
+    const { userId, username, nome } = req.body;
+    
+    if (!userId || !username) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Update or add user to online users
+    onlineUsers.set(userId, {
+      id: userId,
+      username,
+      nome,
+      lastSeen: new Date()
+    });
+    
+    console.log(`User presence updated: ${username} (${userId})`);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error updating presence:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/presence/users', (req, res) => {
+  try {
+    const now = new Date();
+    const activeUsers = [];
+    
+    // Filter out stale users
+    for (const [userId, userData] of onlineUsers.entries()) {
+      const lastSeen = new Date(userData.lastSeen);
+      const timeDiff = now.getTime() - lastSeen.getTime();
+      
+      if (timeDiff < PRESENCE_TIMEOUT) {
+        activeUsers.push(userData);
+      } else {
+        // Remove stale user
+        onlineUsers.delete(userId);
+      }
+    }
+    
+    res.json(activeUsers);
+    
+  } catch (error) {
+    console.error('Error getting online users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Clean up stale users periodically
+setInterval(() => {
+  const now = new Date();
+  
+  for (const [userId, userData] of onlineUsers.entries()) {
+    const lastSeen = new Date(userData.lastSeen);
+    const timeDiff = now.getTime() - lastSeen.getTime();
+    
+    if (timeDiff >= PRESENCE_TIMEOUT) {
+      console.log(`Removing stale user: ${userData.username} (${userId})`);
+      onlineUsers.delete(userId);
+    }
+  }
+}, 60000); // Run every minute
+
 // API Routes
 app.post('/api/auth/login', async (req, res) => {
     try {

@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, isAuthenticated, getCurrentUser, login, logout } from '@/services/authService';
+import { startPresenceService, stopPresenceService } from '@/services/presenceService';
 
 interface AuthContextType {
   user: User | null;
@@ -32,8 +33,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check if user is already authenticated
     if (isAuthenticated()) {
       setUser(getCurrentUser());
+      
+      // Start presence service for authenticated users
+      startPresenceService();
     }
     setLoading(false);
+    
+    // Clean up presence service on unmount
+    return () => {
+      stopPresenceService();
+    };
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
@@ -41,12 +50,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const loggedInUser = await login(username, password);
       setUser(loggedInUser);
+      
+      // Start presence service after login
+      startPresenceService();
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
+    // Stop presence service before logout
+    stopPresenceService();
+    
     logout();
     setUser(null);
   };
