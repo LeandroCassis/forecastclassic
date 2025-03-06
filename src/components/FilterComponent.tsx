@@ -44,7 +44,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[350px] p-2 bg-white">
+      <DropdownMenuContent align="start" className="w-[390px] p-2 bg-white">
         <div className="space-y-2">
           <div className="px-2 pb-2 border-b">
             <Input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="h-8 text-[1.15rem] text-black" />
