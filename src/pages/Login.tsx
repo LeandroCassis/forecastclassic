@@ -18,6 +18,7 @@ const LoginPage = () => {
   useEffect(() => {
     // Redirect to home if already logged in
     if (isLoggedIn) {
+      console.log("User is already logged in, redirecting to home");
       navigate('/');
     }
   }, [isLoggedIn, navigate]);
@@ -50,7 +51,14 @@ const LoginPage = () => {
       navigate('/');
     } catch (error) {
       console.error('Login error in component:', error);
-      setError((error as Error).message || 'Erro desconhecido durante o login');
+      const errorMessage = (error as Error).message || 'Erro desconhecido durante o login';
+      setError(errorMessage);
+      
+      toast({
+        title: "Erro no login",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
