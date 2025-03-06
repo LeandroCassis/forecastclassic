@@ -1,6 +1,6 @@
 
 import { toast } from "@/hooks/use-toast";
-import { apiRequest } from "./apiProxy";
+import { findUserByCredentials } from "@/data/users";
 
 export interface User {
   id: number;
@@ -9,19 +9,18 @@ export interface User {
   role: string;
 }
 
-// Direct API call for authentication with simplified error handling
+// Local authentication using the users data file
 export const loginUser = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
     
-    const { data, error, success, status } = await apiRequest<User>(
-      '/api/auth/login', 
-      'POST', 
-      { username, password }
-    );
+    // Simulate network delay for a more realistic experience
+    await new Promise(resolve => setTimeout(resolve, 300));
     
-    if (!success || !data) {
-      const errorMessage = error || 'Falha na autenticação';
+    const user = findUserByCredentials(username, password);
+    
+    if (!user) {
+      const errorMessage = 'Nome de usuário ou senha inválidos';
       console.error('Login failed:', errorMessage);
       toast({ 
         title: 'Erro no login', 
@@ -31,15 +30,23 @@ export const loginUser = async (username: string, password: string): Promise<Use
       throw new Error(errorMessage);
     }
     
-    // Store user in localStorage
-    localStorage.setItem('user', JSON.stringify(data));
+    // Create a user object without the password field for security
+    const userData: User = {
+      id: user.id,
+      username: user.username,
+      nome: user.nome,
+      role: user.role
+    };
     
-    return data;
+    // Store user in localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    return userData;
   } catch (error) {
     console.error('Login process error:', error);
     toast({ 
       title: 'Erro no login', 
-      description: (error as Error).message || 'Falha ao conectar com o servidor de autenticação',
+      description: (error as Error).message || 'Falha na autenticação',
       variant: 'destructive'
     });
     throw error;

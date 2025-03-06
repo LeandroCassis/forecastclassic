@@ -50,7 +50,7 @@ const LoginPage = () => {
     }
   };
 
-  // Hardcoded credentials for development/testing
+  // Quick login for testing
   const quickLogin = async (e: React.MouseEvent, testUser: string, testPass: string) => {
     e.preventDefault();
     setUsername(testUser);
