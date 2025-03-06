@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -66,20 +65,57 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      // Tentar ler a resposta, independentemente do formato
+      let errorMessage;
+      try {
+        // Primeiro, tenta como JSON
+        const errorData = await response.json();
+        errorMessage = errorData.error || `Erro ${response.status}`;
+      } catch (e) {
+        // Se falhar, tenta como texto
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || `Erro ${response.status}`;
+        } catch (textError) {
+          // Se ambos falharem, usa o código de status
+          errorMessage = `Erro ${response.status}`;
+        }
+      }
+      
       console.error('Login failed with status:', response.status);
-      console.error('Response body:', errorText);
-      throw new Error(`Login failed: ${response.status}`);
+      console.error('Error message:', errorMessage);
+      throw new Error(`Login failed: ${errorMessage}`);
     }
 
+    // Obter o tipo de conteúdo, mas não lançar erro imediato se não for JSON
     const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      console.error('Invalid content type:', contentType);
-      throw new Error("Login failed: Server did not return JSON data");
+    console.log('Response content type:', contentType);
+    
+    // Tenta analisar como JSON, com fallback para que seja mais robusto
+    let user;
+    try {
+      user = await response.json();
+    } catch (jsonError) {
+      console.error('Failed to parse response as JSON:', jsonError);
+      
+      // Tentar obter o texto e analisar como JSON
+      try {
+        const text = await response.text();
+        console.log('Response text:', text);
+        user = JSON.parse(text);
+      } catch (textError) {
+        console.error('Failed to parse response text as JSON:', textError);
+        throw new Error("Login failed: Server did not return valid user data");
+      }
     }
-
-    const user = await response.json();
+    
     console.log('Login successful:', user);
+    
+    // Verificar se os campos necessários estão presentes
+    if (!user || !user.id || !user.username) {
+      console.error('Invalid user data received:', user);
+      throw new Error("Login failed: Invalid user data received from server");
+    }
     
     // Store user info in localStorage and memory
     localStorage.setItem('user', JSON.stringify(user));
