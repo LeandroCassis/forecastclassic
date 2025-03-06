@@ -5,6 +5,9 @@ import FilterComponent from '@/components/FilterComponent';
 import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
+import { fetchFromApi } from '@/services/apiService';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Produto {
   codigo: string;
@@ -33,12 +36,23 @@ const LoadingPlaceholder = () => <div className="space-y-12">
   </div>;
 
 const Index = () => {
+  const { user, isLoggedIn } = useAuth();
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedFabricas, setSelectedFabricas] = useState<string[]>([]);
   const [selectedFamilia1, setSelectedFamilia1] = useState<string[]>([]);
   const [selectedFamilia2, setSelectedFamilia2] = useState<string[]>([]);
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      toast({
+        title: "Login required",
+        description: "Please log in to access this page",
+        variant: "destructive",
+      });
+    }
+  }, [isLoggedIn]);
 
   const {
     data: produtos,
@@ -48,17 +62,20 @@ const Index = () => {
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Azure SQL...');
-      const response = await fetch('/api/produtos');
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
-      console.log('Fetched produtos:', data);
-      return data as Produto[];
+      try {
+        return await fetchFromApi('/produtos');
+      } catch (error) {
+        console.error('Error in produtos query:', error);
+        throw error;
+      }
     },
     staleTime: Infinity,
     gcTime: 1000 * 60 * 30,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false
+    refetchOnReconnect: false,
+    retry: 1,
+    enabled: isLoggedIn
   });
 
   useEffect(() => {
@@ -139,11 +156,30 @@ const Index = () => {
     return pages;
   };
 
+  if (!isLoggedIn) {
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-[95%] mx-auto py-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-blue-100/50 p-6">
+          <div className="text-center py-8">
+            <h1 className="text-2xl font-semibold mb-4">Login Required</h1>
+            <p>Please log in to access the S&OP dashboard.</p>
+          </div>
+        </div>
+      </div>
+    </div>;
+  }
+
   if (error) {
     return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-[95%] mx-auto py-6">
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-red-100/50 p-6">
           <div className="text-red-600">Erro ao carregar dados: {(error as Error).message}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Tentar Novamente
+          </button>
         </div>
       </div>
     </div>;
