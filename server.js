@@ -5,7 +5,7 @@ import mssql from 'mssql';
 import crypto from 'crypto';
 
 const app = express();
-const port = 3001;
+const port = 3005;
 
 app.use(cors());
 app.use(express.json());
@@ -13,7 +13,7 @@ app.use(express.json());
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'VESPERTTINE',
+    database: 'FORECAST',  // Alterado de VESPERTTINE para FORECAST
     user: 'vesperttine',
     password: '840722aA',
     options: {
@@ -65,15 +65,15 @@ async function query(queryString, params) {
 // Check if users table exists, create it if not
 async function initializeDatabase() {
     try {
-        // Check if users table exists
-        const tablesResult = await query(`
+        // Verificar se a tabela usuarios existe
+        const usersTableResult = await query(`
             SELECT TABLE_NAME 
             FROM INFORMATION_SCHEMA.TABLES 
             WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'usuarios'
         `);
         
-        if (tablesResult.length === 0) {
-            // Create users table
+        if (usersTableResult.length === 0) {
+            // Criar a tabela usuarios apenas se ela não existir
             await query(`
                 CREATE TABLE usuarios (
                     id INT IDENTITY(1,1) PRIMARY KEY,
@@ -86,21 +86,19 @@ async function initializeDatabase() {
                 )
             `);
             
-            // Create default admin user
-            const adminPassword = 'admin';
-            const adminPasswordHash = crypto
-                .createHash('sha256')
-                .update(adminPassword)
-                .digest('hex');
-                
+            // Criar usuário admin apenas se a tabela acabou de ser criada
             await query(`
                 INSERT INTO usuarios (username, password_hash, nome, role)
                 VALUES (@p0, @p1, @p2, @p3)
-            `, ['admin', adminPasswordHash, 'Administrador', 'admin']);
+            `, ['admin', 'admin', 'Administrador', 'admin']);
             
             console.log('Created users table and admin user');
         }
         
+        // Verificar usuários atuais
+        const testResult = await query('SELECT * FROM usuarios');
+        console.log('Current users in database:', testResult);
+
         // Check if forecast_values_log table exists
         const logTableResult = await query(`
             SELECT TABLE_NAME 
@@ -121,102 +119,84 @@ async function initializeDatabase() {
                     valor_novo DECIMAL(18,2) NOT NULL,
                     user_id INT,
                     username VARCHAR(100),
-                    modified_at DATETIME DEFAULT GETDATE(),
-                    FOREIGN KEY (produto_codigo) REFERENCES produtos(codigo)
+                    user_fullname VARCHAR(100),
+                    modified_at DATETIME DEFAULT GETDATE()
                 )
             `);
             
             console.log('Created forecast_values_log table');
         }
-        
-        // Test the database connection
-        const testResult = await query('SELECT TOP 1 * FROM usuarios');
-        console.log('Database test result:', testResult);
     } catch (error) {
         console.error('Error initializing database:', error);
     }
 }
 
 // Initialize database on server start
-initializeDatabase().catch(console.error);
+initializeDatabase()
+    .catch(console.error);
 
 // Authentication endpoint
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        console.log('Login attempt for user:', username);
+        console.log('=== Login attempt ===');
+        console.log('Username:', username);
+        console.log('Password:', password);
         
         if (!username || !password) {
+            console.log('Missing username or password');
             return res.status(400).json({ error: 'Username and password are required' });
         }
         
-        // Hash the password for comparison
-        const hashedPassword = crypto
-            .createHash('sha256')
-            .update(password)
-            .digest('hex');
-        
         // Query the users table
         const users = await query(
-            'SELECT id, username, nome, role FROM usuarios WHERE username = @p0 AND password_hash = @p1',
-            [username, hashedPassword]
+            'SELECT * FROM usuarios WHERE username = @p0',
+            [username]
         );
         
-        console.log('User query result:', users);
+        console.log('Found users:', users);
         
-        // Fallback to admin/admin if database connection fails or no user found
         if (users.length === 0) {
-            if (username === 'admin' && password === 'admin') {
-                // Try to create the admin user in the database
-                try {
-                    const adminPasswordHash = crypto
-                        .createHash('sha256')
-                        .update('admin')
-                        .digest('hex');
-                    
-                    await query(
-                        `IF NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'admin')
-                         INSERT INTO usuarios (username, password_hash, nome, role)
-                         VALUES (@p0, @p1, @p2, @p3)`,
-                        ['admin', adminPasswordHash, 'Administrador', 'admin']
-                    );
-                    
-                    console.log('Created admin user in database');
-                } catch (err) {
-                    console.error('Failed to create admin user:', err);
-                }
-                
-                return res.json({
-                    id: 1,
-                    username: 'admin',
-                    name: 'Administrador',
-                    role: 'admin'
-                });
-            }
-            
+            console.log('No user found with username:', username);
             return res.status(401).json({ error: 'Usuário ou senha inválidos' });
         }
         
         const user = users[0];
+        console.log('Found user:', {
+            id: user.id,
+            username: user.username,
+            password_hash: user.password_hash,
+            role: user.role
+        });
+        
+        // Comparação da senha em texto plano
+        if (String(password).trim() !== String(user.password_hash).trim()) {
+            console.log('Password mismatch');
+            console.log('Received:', password);
+            console.log('Expected:', user.password_hash);
+            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+        }
+        
+        console.log('Login successful');
         
         // Update last login time
         await query(
             'UPDATE usuarios SET last_login = GETDATE() WHERE id = @p0',
             [user.id]
-        ).catch(err => console.error('Error updating last login:', err));
+        );
         
         const userData = {
             id: user.id,
             username: user.username,
-            name: user.nome || user.username,
-            role: user.role || 'user'
+            nome: user.nome,
+            role: user.role
         };
         
-        console.log('User successfully logged in:', userData);
+        console.log('Sending user data:', userData);
         res.json(userData);
-    } catch (error) {
-        console.error('Login error:', error);
+    } catch (err) {
+        console.error('Login error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

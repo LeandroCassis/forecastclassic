@@ -1,10 +1,9 @@
-
 import express from 'express';
 import cors from 'cors';
 import { query } from '../src/integrations/azure/client.js';
 
 const app = express();
-const port = 3001;
+const port = 3005;
 
 app.use(cors());
 app.use(express.json());

@@ -1,10 +1,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-const API_URL = 'http://localhost:3001/api';
+
 interface ProductHeaderProps {
   produto: string;
 }
+
 const ProductHeader: React.FC<ProductHeaderProps> = ({
   produto
 }) => {
@@ -14,13 +15,14 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
     queryKey: ['product-details', produto],
     queryFn: async () => {
       console.log('Fetching product details for:', produto);
-      const response = await fetch(`${API_URL}/produtos/${encodeURIComponent(produto)}`);
+      const response = await fetch(`/api/produtos/${encodeURIComponent(produto)}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       console.log('Product details fetched:', data);
       return data;
     }
   });
+
   return <div className="bg-white/80 backdrop-blur-lg rounded-t-2xl shadow-lg border border-b-0 border-blue-100/50 p-4 pb-3">
       <div className=" flex justify-between text-[1rem] ">
         <div className="text-center">
@@ -66,4 +68,5 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
       </div>
     </div>;
 };
+
 export default ProductHeader;

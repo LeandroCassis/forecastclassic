@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export interface User {
@@ -47,8 +46,7 @@ export const getCurrentUser = (): User | null => {
 // Login function using API
 export const login = async (username: string, password: string): Promise<User> => {
   try {
-    // Use the direct Azure SQL connection string in the API request
-    const response = await fetch('http://localhost:3001/api/auth/login', {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,25 +55,18 @@ export const login = async (username: string, password: string): Promise<User> =
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Falha ao realizar login');
+      throw new Error('Login failed');
     }
 
-    const userData = await response.json();
+    const user = await response.json();
     
     // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(userData));
-    currentUser = userData;
+    localStorage.setItem('user', JSON.stringify(user));
+    currentUser = user;
     
-    console.log('Login successful:', userData);
-    return userData;
+    return user;
   } catch (error) {
-    console.error('Login error details:', error);
-    toast({
-      title: "Erro de autenticação",
-      description: (error as Error).message || "Falha ao realizar login",
-      variant: "destructive"
-    });
+    toast({ title: 'Login failed', description: error.message });
     throw error;
   }
 };

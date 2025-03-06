@@ -1,7 +1,4 @@
-
 import { useQuery } from '@tanstack/react-query';
-
-const API_URL = 'http://localhost:3001/api';
 
 export const useForecastData = (produto: string) => {
   // Product data query
@@ -9,7 +6,7 @@ export const useForecastData = (produto: string) => {
     queryKey: ['product', produto],
     queryFn: async () => {
       try {
-        const response = await fetch(`${API_URL}/produtos/${encodeURIComponent(produto)}`);
+        const response = await fetch(`/api/produtos/${encodeURIComponent(produto)}`);
         if (!response.ok) throw new Error('Network response was not ok');
         return await response.json();
       } catch (error) {
@@ -27,7 +24,7 @@ export const useForecastData = (produto: string) => {
     queryKey: ['grupos'],
     queryFn: async () => {
       try {
-        const response = await fetch(`${API_URL}/grupos`);
+        const response = await fetch('/api/grupos');
         if (!response.ok) throw new Error('Network response was not ok');
         return await response.json();
       } catch (error) {
@@ -45,7 +42,7 @@ export const useForecastData = (produto: string) => {
     queryKey: ['month_configurations'],
     queryFn: async () => {
       try {
-        const response = await fetch(`${API_URL}/month-configurations`);
+        const response = await fetch('/api/month-configurations');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
@@ -79,7 +76,7 @@ export const useForecastData = (produto: string) => {
       if (!productData?.codigo) return {};
       
       try {
-        const response = await fetch(`${API_URL}/forecast-values/${encodeURIComponent(productData.codigo)}`);
+        const response = await fetch(`/api/forecast-values/${encodeURIComponent(productData.codigo)}`);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         

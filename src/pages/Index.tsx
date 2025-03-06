@@ -6,8 +6,6 @@ import UserHeader from '@/components/UserHeader';
 import { useQuery } from '@tanstack/react-query';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 
-const API_URL = 'http://localhost:3001/api';
-
 interface Produto {
   codigo: string;
   produto: string;
@@ -50,7 +48,7 @@ const Index = () => {
     queryKey: ['produtos'],
     queryFn: async () => {
       console.log('Fetching produtos from Azure SQL...');
-      const response = await fetch(`${API_URL}/produtos`);
+      const response = await fetch('/api/produtos');
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       console.log('Fetched produtos:', data);
