@@ -40,6 +40,10 @@ const LoginPage = () => {
     
     try {
       console.log('Attempting login with credentials:', username);
+      
+      // Add a small delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       await login(username, password);
       console.log('Login successful, navigating to home');
       

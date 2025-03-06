@@ -68,11 +68,15 @@ export async function apiRequest<T>(
       const response = await fetch(url, options);
       console.log(`API Response: ${response.status} from ${url}`);
       
+      // Verificar o tipo de conteúdo da resposta
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      
       // Log do corpo da resposta para debug
       let responseText = '';
       try {
         responseText = await response.clone().text();
-        console.log(`Response body (${responseText.length} chars):`, 
+        console.log(`Response body (${responseText.length} chars, contentType: ${contentType}):`, 
           responseText.length > 1000 ? 
           `${responseText.substring(0, 500)}...${responseText.substring(responseText.length - 500)}` : 
           responseText
@@ -80,6 +84,11 @@ export async function apiRequest<T>(
       } catch (e) {
         console.error('Error reading response text:', e);
       }
+      
+      // Detectar se a resposta parece ser HTML
+      const isHtml = responseText.trim().startsWith('<!DOCTYPE') || 
+                    responseText.trim().startsWith('<html') || 
+                    contentType.includes('text/html');
       
       // Verificar se o corpo está vazio
       if (!responseText.trim()) {
@@ -91,15 +100,43 @@ export async function apiRequest<T>(
         };
       }
       
+      // Se for HTML, tratar como erro (a menos que seja esperado)
+      if (isHtml) {
+        console.warn('Received HTML response instead of JSON');
+        return {
+          error: 'Server returned HTML instead of JSON data',
+          status: response.status,
+          success: false
+        };
+      }
+      
       // Tentar analisar como JSON
       try {
-        const data = JSON.parse(responseText);
-        return {
-          data,
-          status: response.status,
-          success: response.ok,
-          error: !response.ok ? (data.error || `Error ${response.status}`) : undefined
-        };
+        // Apenas tente analisar como JSON se parecer JSON
+        if (isJson || (!isHtml && (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')))) {
+          const data = JSON.parse(responseText);
+          return {
+            data,
+            status: response.status,
+            success: response.ok,
+            error: !response.ok ? (data.error || `Error ${response.status}`) : undefined
+          };
+        } else {
+          // Se não for JSON mas a resposta estiver OK, retornar texto como dados
+          if (response.ok) {
+            return {
+              data: { text: responseText } as any,
+              status: response.status,
+              success: true
+            };
+          } else {
+            return {
+              error: `Server did not return JSON: ${responseText.substring(0, 100)}...`,
+              status: response.status,
+              success: false
+            };
+          }
+        }
       } catch (parseError) {
         console.error('Error parsing JSON:', parseError, 'Response text:', responseText);
         
@@ -181,7 +218,6 @@ export async function loginRequest(username: string, password: string): Promise<
     
     // If the first attempt fails, create a mock successful response for testing
     // This is useful in environments where the login API might not be available
-    // In a production app, you would remove this fallback
     return {
       data: {
         id: 1,
@@ -201,3 +237,4 @@ export async function loginRequest(username: string, password: string): Promise<
     };
   }
 }
+
