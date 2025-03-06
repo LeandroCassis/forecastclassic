@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 
-const API_URL = 'http://localhost:3001/api';
+// Use relative path for API calls to go through the proxy
+const API_URL = '/api';
 
 export const useForecastMutations = (productCodigo: string | undefined) => {
   const queryClient = useQueryClient();
@@ -31,42 +32,52 @@ export const useForecastMutations = (productCodigo: string | undefined) => {
         valor
       });
 
-      const response = await fetch(`${API_URL}/forecast-values`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productCodigo,
-          ano,
-          id_tipo,
-          mes,
-          valor,
-          userId: currentUser.id,
-          username: currentUser.username,
-          userFullName: currentUser.nome
-        }),
-      });
+      try {
+        const response = await fetch(`${API_URL}/forecast-values`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productCodigo,
+            ano,
+            id_tipo,
+            mes,
+            valor,
+            userId: currentUser.id,
+            username: currentUser.username,
+            userFullName: currentUser.nome
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error response:', errorText);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Server error response:', errorText);
+          toast({
+            title: "Erro ao atualizar valor",
+            description: `Falha ao salvar dados: ${errorText}`,
+            variant: "destructive"
+          });
+          throw new Error(`Network response was not ok: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('Update result:', result);
         toast({
-          title: "Erro ao atualizar valor",
-          description: `Falha ao salvar dados: ${errorText}`,
+          title: "Valor atualizado",
+          description: "O valor foi salvo com sucesso",
+          variant: "default"
+        });
+        return result;
+      } catch (error) {
+        console.error('Error updating forecast:', error);
+        toast({
+          title: "Erro de conexão",
+          description: "Não foi possível conectar ao servidor. Certifique-se de que 'npm start' foi executado.",
           variant: "destructive"
         });
-        throw new Error(`Network response was not ok: ${errorText}`);
+        throw error;
       }
-      
-      const result = await response.json();
-      console.log('Update result:', result);
-      toast({
-        title: "Valor atualizado",
-        description: "O valor foi salvo com sucesso",
-        variant: "default"
-      });
-      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forecast_values'] });
