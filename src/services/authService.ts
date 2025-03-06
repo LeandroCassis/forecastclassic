@@ -9,6 +9,15 @@ export interface User {
   role: string;
 }
 
+// Interface for API response data
+interface UserResponse {
+  id: number;
+  username: string;
+  nome?: string;
+  role?: string;
+  [key: string]: any; // For any other properties that might be returned
+}
+
 // Store the current authenticated user
 let currentUser: User | null = null;
 
@@ -60,26 +69,27 @@ export const login = async (username: string, password: string): Promise<User> =
       throw new Error(`Login failed: ${errorMsg}`);
     }
     
-    const user = response.data;
-    console.log('Login successful:', user);
+    // Type assertion to help TypeScript understand the structure
+    const userData = response.data as UserResponse;
+    console.log('Login successful:', userData);
     
     // Verificar se os campos necessários estão presentes
-    if (!user || typeof user !== 'object') {
-      console.error('Invalid user data received (not an object):', user);
+    if (!userData || typeof userData !== 'object') {
+      console.error('Invalid user data received (not an object):', userData);
       throw new Error("Login failed: Invalid user data format received from server");
     }
     
-    if (!user.id || !user.username) {
-      console.error('Invalid user data received (missing required fields):', user);
+    if (!userData.id || !userData.username) {
+      console.error('Invalid user data received (missing required fields):', userData);
       throw new Error("Login failed: Invalid user data received from server");
     }
     
     // Garantir que todos os campos estão presentes, mesmo com valores padrão
     const normalizedUser: User = {
-      id: user.id,
-      username: user.username,
-      nome: user.nome || username, // Use o username se nome estiver ausente
-      role: user.role || 'user'
+      id: userData.id,
+      username: userData.username,
+      nome: userData.nome || username, // Use o username se nome estiver ausente
+      role: userData.role || 'user'
     };
     
     // Store user info in localStorage and memory
