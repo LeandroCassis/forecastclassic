@@ -1,3 +1,4 @@
+
 // Simple Express server to handle API requests
 import express from 'express';
 import cors from 'cors';
@@ -10,10 +11,10 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
-// Database configuration
+// Database configuration - Updated to use FORECAST database
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'VESPERTTINE',
+    database: 'FORECAST', // Changed from VESPERTTINE to FORECAST
     user: 'vesperttine',
     password: '840722aA',
     options: {
@@ -33,9 +34,9 @@ let pool = null;
 async function getConnection() {
     try {
         if (!pool) {
-            console.log('Connecting to Azure SQL Database...');
+            console.log('Connecting to Azure SQL FORECAST Database...');
             pool = await new mssql.ConnectionPool(config).connect();
-            console.log('Successfully connected to Azure SQL Database');
+            console.log('Successfully connected to Azure SQL FORECAST Database');
         }
         return pool;
     } catch (err) {
