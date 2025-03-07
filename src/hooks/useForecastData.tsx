@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { config } from '@/config/env';
 
@@ -7,9 +8,23 @@ export const useForecastData = (produto: string) => {
     queryKey: ['product', produto],
     queryFn: async () => {
       try {
+        console.log('Fetching product details for:', produto);
         const response = await fetch(`${config.API_URL}/produtos/${encodeURIComponent(produto)}`);
-        if (!response.ok) throw new Error('Network response was not ok');
-        return await response.json();
+        
+        if (!response.ok) {
+          console.error(`Error fetching product: ${response.status} ${response.statusText}`);
+          throw new Error('Network response was not ok');
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`Invalid content type: ${contentType}`);
+          throw new Error(`Expected JSON but got ${contentType}`);
+        }
+        
+        const data = await response.json();
+        console.log('Product details fetched:', data);
+        return data;
       } catch (error) {
         console.error('Exception in product fetch:', error);
         throw error;
@@ -26,7 +41,18 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       try {
         const response = await fetch(`${config.API_URL}/grupos`);
-        if (!response.ok) throw new Error('Network response was not ok');
+        
+        if (!response.ok) {
+          console.error(`Error fetching grupos: ${response.status} ${response.statusText}`);
+          throw new Error('Network response was not ok');
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`Invalid content type: ${contentType}`);
+          throw new Error(`Expected JSON but got ${contentType}`);
+        }
+        
         return await response.json();
       } catch (error) {
         console.error('Exception in grupos fetch:', error);
@@ -44,7 +70,18 @@ export const useForecastData = (produto: string) => {
     queryFn: async () => {
       try {
         const response = await fetch(`${config.API_URL}/month-configurations`);
-        if (!response.ok) throw new Error('Network response was not ok');
+        
+        if (!response.ok) {
+          console.error(`Error fetching month configurations: ${response.status} ${response.statusText}`);
+          throw new Error('Network response was not ok');
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`Invalid content type: ${contentType}`);
+          throw new Error(`Expected JSON but got ${contentType}`);
+        }
+        
         const data = await response.json();
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
         
@@ -78,7 +115,18 @@ export const useForecastData = (produto: string) => {
       
       try {
         const response = await fetch(`${config.API_URL}/forecast-values/${encodeURIComponent(productData.codigo)}`);
-        if (!response.ok) throw new Error('Network response was not ok');
+        
+        if (!response.ok) {
+          console.error(`Error fetching forecast values: ${response.status} ${response.statusText}`);
+          throw new Error('Network response was not ok');
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`Invalid content type: ${contentType}`);
+          throw new Error(`Expected JSON but got ${contentType}`);
+        }
+        
         const data = await response.json();
         
         const transformedData: { [key: string]: { [key: string]: number } } = {};

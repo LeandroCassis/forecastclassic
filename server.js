@@ -18,19 +18,16 @@ app.use(cors({
 // Add OPTIONS preflight handler
 app.options('*', cors());
 
-// Adicionar middleware para tratar solicitações OPTIONS (preflight CORS)
-app.options('*', cors());
-
-// Parse JSON request bodies com configurações adicionais
+// Parse JSON request bodies with additional configurations
 app.use(express.json({
-  limit: '10mb', // Aumentar o limite do tamanho do corpo
-  strict: false, // Ser menos rigoroso com o formato JSON
+  limit: '10mb', // Increase body size limit
+  strict: false, // Be less strict with JSON format
   verify: (req, res, buf) => { 
     try {
       JSON.parse(buf);
     } catch (e) {
       console.error('Invalid JSON in request:', e);
-      // Continuamos processando mesmo com JSON inválido
+      // Continue processing even with invalid JSON
     }
   }
 }));
@@ -376,10 +373,22 @@ app.get('/api/produtos', async (req, res) => {
         const data = await query(
             'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
         );
-        res.json(data);
+        
+        // Ensure proper Content-Type is set
+        res.setHeader('Content-Type', 'application/json');
+        
+        // Log the structure of what we're returning
+        console.log(`Returning ${data.length} produtos`);
+        
+        // Return data with explicit JSON formatting
+        return res.json(data);
     } catch (error) {
         console.error('Error fetching produtos:', error);
-        res.status(500).json({ 
+        
+        // Ensure proper Content-Type is set
+        res.setHeader('Content-Type', 'application/json');
+        
+        return res.status(500).json({ 
             error: 'Internal server error',
             details: error.message 
         });
