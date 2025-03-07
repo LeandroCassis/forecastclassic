@@ -15,7 +15,7 @@ app.use(cors({
   credentials: true
 }));
 
-// Add OPTIONS preflight handler
+// Add OPTIONS preflight handler for all routes
 app.options('*', cors());
 
 // Parse JSON request bodies with additional configurations
@@ -38,14 +38,30 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.setHeader('Content-Type', 'text/plain');
-  res.status(200).send('OK');
-});
-
-// Ensure all API responses have proper JSON format
-app.use('/api', (req, res, next) => {
+// Ensure all API responses have proper JSON format for every route
+app.use((req, res, next) => {
+  // Set proper Content-Type for all responses
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Store the original send method
+  const originalSend = res.send;
+  
+  // Override the send method to ensure proper JSON formatting
+  res.send = function(body) {
+    // If the body is not already a string, stringify it properly
+    if (typeof body !== 'string') {
+      try {
+        body = JSON.stringify(body);
+      } catch (e) {
+        console.error('Error stringifying response:', e);
+        body = JSON.stringify({ error: 'Internal server error during response serialization' });
+      }
+    }
+    
+    // Call the original send method with the properly formatted body
+    return originalSend.call(this, body);
+  };
+  
   // Intercept the json method to ensure proper formatting
   const originalJson = res.json;
   res.json = function(body) {
@@ -58,9 +74,12 @@ app.use('/api', (req, res, next) => {
     return originalJson.call(this, body);
   };
   
-  // Set proper Content-Type
-  res.setHeader('Content-Type', 'application/json');
   next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
 });
 
 // Database configuration
@@ -374,20 +393,13 @@ app.get('/api/produtos', async (req, res) => {
             'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
         );
         
-        // Ensure proper Content-Type is set
-        res.setHeader('Content-Type', 'application/json');
-        
         // Log the structure of what we're returning
         console.log(`Returning ${data.length} produtos`);
         
-        // Return data with explicit JSON formatting
+        // Return data as JSON
         return res.json(data);
     } catch (error) {
         console.error('Error fetching produtos:', error);
-        
-        // Ensure proper Content-Type is set
-        res.setHeader('Content-Type', 'application/json');
-        
         return res.status(500).json({ 
             error: 'Internal server error',
             details: error.message 
@@ -404,7 +416,7 @@ app.get('/api/grupos', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
@@ -417,7 +429,7 @@ app.get('/api/month-configurations', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
@@ -428,10 +440,15 @@ app.get('/api/produtos/:produto', async (req, res) => {
             'SELECT * FROM produtos WHERE produto = @p0',
             [req.params.produto]
         );
+        
+        if (data.length === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        
         res.json(data[0]);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
@@ -445,7 +462,7 @@ app.get('/api/forecast-values/:productCode', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 

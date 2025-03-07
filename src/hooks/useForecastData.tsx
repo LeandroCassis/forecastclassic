@@ -1,8 +1,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { config } from '@/config/env';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useForecastData = (produto: string) => {
+  const { toast } = useToast();
+
   // Product data query
   const { data: productData, isError: productError } = useQuery({
     queryKey: ['product', produto],
@@ -13,12 +16,14 @@ export const useForecastData = (produto: string) => {
         
         if (!response.ok) {
           console.error(`Error fetching product: ${response.status} ${response.statusText}`);
-          throw new Error('Network response was not ok');
+          throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error(`Invalid content type: ${contentType}`);
+          const text = await response.text();
+          console.error('Response body:', text.substring(0, 500)); // Log the first 500 chars
           throw new Error(`Expected JSON but got ${contentType}`);
         }
         
@@ -27,6 +32,12 @@ export const useForecastData = (produto: string) => {
         return data;
       } catch (error) {
         console.error('Exception in product fetch:', error);
+        // Show error toast
+        toast({
+          variant: "destructive",
+          title: "Error fetching product",
+          description: error instanceof Error ? error.message : 'Unknown error',
+        });
         throw error;
       }
     },
@@ -44,18 +55,26 @@ export const useForecastData = (produto: string) => {
         
         if (!response.ok) {
           console.error(`Error fetching grupos: ${response.status} ${response.statusText}`);
-          throw new Error('Network response was not ok');
+          throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error(`Invalid content type: ${contentType}`);
+          const text = await response.text();
+          console.error('Response body:', text.substring(0, 500)); // Log the first 500 chars
           throw new Error(`Expected JSON but got ${contentType}`);
         }
         
         return await response.json();
       } catch (error) {
         console.error('Exception in grupos fetch:', error);
+        // Show error toast
+        toast({
+          variant: "destructive",
+          title: "Error fetching grupos",
+          description: error instanceof Error ? error.message : 'Unknown error',
+        });
         throw error;
       }
     },
@@ -73,12 +92,14 @@ export const useForecastData = (produto: string) => {
         
         if (!response.ok) {
           console.error(`Error fetching month configurations: ${response.status} ${response.statusText}`);
-          throw new Error('Network response was not ok');
+          throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error(`Invalid content type: ${contentType}`);
+          const text = await response.text();
+          console.error('Response body:', text.substring(0, 500)); // Log the first 500 chars
           throw new Error(`Expected JSON but got ${contentType}`);
         }
         
@@ -99,6 +120,12 @@ export const useForecastData = (produto: string) => {
         return configByYear;
       } catch (error) {
         console.error('Exception in month configurations fetch:', error);
+        // Show error toast
+        toast({
+          variant: "destructive",
+          title: "Error fetching month configurations",
+          description: error instanceof Error ? error.message : 'Unknown error',
+        });
         throw error;
       }
     },
@@ -118,12 +145,14 @@ export const useForecastData = (produto: string) => {
         
         if (!response.ok) {
           console.error(`Error fetching forecast values: ${response.status} ${response.statusText}`);
-          throw new Error('Network response was not ok');
+          throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error(`Invalid content type: ${contentType}`);
+          const text = await response.text();
+          console.error('Response body:', text.substring(0, 500)); // Log the first 500 chars
           throw new Error(`Expected JSON but got ${contentType}`);
         }
         
@@ -141,6 +170,12 @@ export const useForecastData = (produto: string) => {
         return transformedData;
       } catch (error) {
         console.error('Exception in forecast values fetch:', error);
+        // Show error toast
+        toast({
+          variant: "destructive",
+          title: "Error fetching forecast values",
+          description: error instanceof Error ? error.message : 'Unknown error',
+        });
         throw error;
       }
     },
