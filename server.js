@@ -3,352 +3,102 @@ import express from 'express';
 import cors from 'cors';
 import mssql from 'mssql';
 import crypto from 'crypto';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const port = 3005;
 
-// Configurar CORS para aceitar solicitações de qualquer origem com configurações mais abrangentes
+// Configure CORS with more specific options
 app.use(cors({
-  origin: '*', // Permitir qualquer origem de forma explícita
+  origin: ['http://localhost:8080', 'https://preview--forecastclassic.lovable.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
 }));
 
-// Adicionar middleware para tratar solicitações OPTIONS (preflight CORS)
+// Add OPTIONS preflight handler for all routes
 app.options('*', cors());
 
-// Parse JSON request bodies com configurações adicionais
+// Parse JSON request bodies with additional configurations
 app.use(express.json({
-  limit: '10mb', // Aumentar o limite do tamanho do corpo
-  strict: false, // Ser menos rigoroso com o formato JSON
+  limit: '10mb', // Increase body size limit
+  strict: false, // Be less strict with JSON format
   verify: (req, res, buf) => { 
     try {
       JSON.parse(buf);
     } catch (e) {
       console.error('Invalid JSON in request:', e);
-      // Continuamos processando mesmo com JSON inválido
+      // Continue processing even with invalid JSON
     }
   }
 }));
 
-// Log all requests
+// Clear middleware - make sure all requests have CORS headers
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Log all requests - enhanced logging
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - IP: ${req.ip} - User-Agent: ${req.get('User-Agent')}`);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Ensure all API responses have proper JSON format for every route
+app.use((req, res, next) => {
+  // Set proper Content-Type for all responses
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Store the original send method
+  const originalSend = res.send;
+  
+  // Override the send method to ensure proper JSON formatting
+  res.send = function(body) {
+    // If the body is not already a string, stringify it properly
+    if (typeof body !== 'string') {
+      try {
+        body = JSON.stringify(body);
+      } catch (e) {
+        console.error('Error stringifying response:', e);
+        body = JSON.stringify({ error: 'Internal server error during response serialization' });
+      }
+    } else {
+      // If it's a string but not JSON, try to parse it to validate
+      try {
+        JSON.parse(body);
+      } catch (e) {
+        console.error('Response is not valid JSON:', body.substring(0, 100));
+        // Fix: If the body is not valid JSON, convert it to a JSON response
+        body = JSON.stringify({ error: 'Invalid JSON response', data: body.substring(0, 100) });
+      }
+    }
+    
+    // Call the original send method with the properly formatted body
+    return originalSend.call(this, body);
+  };
+  
+  // Intercept the json method to ensure proper formatting
+  const originalJson = res.json;
+  res.json = function(body) {
+    // If we're dealing with an error, format it properly
+    if (body && body.error) {
+      console.error('Error response:', body.error);
+    }
+    
+    // Call the original json method
+    return originalJson.call(this, body);
+  };
+  
   next();
 });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.setHeader('Content-Type', 'text/plain');
-  res.status(200).send('OK');
-});
-
-// Middleware para garantir respostas JSON corretas em todas as rotas API
-app.use('/api', (req, res, next) => {
-  // Skip health check endpoint
-  if (req.path === '/health') {
-    return next();
-  }
-  
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  next();
-});
-
-// API Routes start here
-
-// Presence routes
-app.post('/api/presence/update', (req, res) => {
-  try {
-    console.log('Presence update request received', req.body);
-    const { userId, username, nome } = req.body;
-    
-    if (!userId || !username) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    // Update or add user to online users
-    onlineUsers.set(userId, {
-      id: userId,
-      username,
-      nome,
-      lastSeen: new Date()
-    });
-    
-    console.log(`User presence updated: ${username} (${userId})`);
-    res.json({ success: true });
-    
-  } catch (error) {
-    console.error('Error updating presence:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/presence/users', (req, res) => {
-  try {
-    console.log('Get online users request received');
-    const now = new Date();
-    const activeUsers = [];
-    
-    // Filter out stale users
-    for (const [userId, userData] of onlineUsers.entries()) {
-      const lastSeen = new Date(userData.lastSeen);
-      const timeDiff = now.getTime() - lastSeen.getTime();
-      
-      if (timeDiff < PRESENCE_TIMEOUT) {
-        activeUsers.push(userData);
-      } else {
-        // Remove stale user
-        onlineUsers.delete(userId);
-      }
-    }
-    
-    console.log('Sending active users:', activeUsers);
-    res.json(activeUsers);
-    
-  } catch (error) {
-    console.error('Error getting online users:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Authentication endpoint with simplified response handling
-app.post('/api/auth/login', async (req, res) => {
-    try {
-        console.log('Login attempt received:', req.body);
-        
-        const { username, password } = req.body;
-        
-        if (!username || !password) {
-            console.log('Missing credentials');
-            return res.status(400).json({ 
-                error: 'Username and password are required' 
-            });
-        }
-        
-        console.log('Finding user:', username);
-        const users = await query(
-            'SELECT * FROM usuarios WHERE username = @p0',
-            [username]
-        );
-        
-        if (users.length === 0) {
-            console.log('User not found:', username);
-            return res.status(401).json({ 
-                error: 'Invalid username or password' 
-            });
-        }
-        
-        const user = users[0];
-        console.log('User found:', user.username);
-        
-        // Simple password check (comparing directly)
-        if (String(password).trim() !== String(user.password_hash).trim()) {
-            console.log('Invalid password for user:', username);
-            return res.status(401).json({ 
-                error: 'Invalid username or password' 
-            });
-        }
-        
-        // Update last login time
-        await query(
-            'UPDATE usuarios SET last_login = GETDATE() WHERE id = @p0',
-            [user.id]
-        );
-        
-        // Construir dados do usuário sem informações sensíveis
-        const userData = {
-            id: user.id,
-            username: user.username,
-            nome: user.nome || '',
-            role: user.role || 'user'
-        };
-        
-        console.log('Login successful for user:', username, 'Data:', userData);
-        
-        // Enviar resposta como JSON simplificado para evitar problemas de parseamento
-        res.status(200).json(userData);
-    } catch (err) {
-        console.error('Login error:', err);
-        
-        // Garantir que erros também sejam retornados como JSON
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.status(500).send(JSON.stringify({ 
-            error: 'Internal server error',
-            details: err.message 
-        }));
-    }
-});
-
-// Product routes
-app.get('/api/produtos', async (req, res) => {
-    try {
-        console.log('Fetching produtos...');
-        const data = await query(
-            'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
-        );
-        res.json(data);
-    } catch (error) {
-        console.error('Error fetching produtos:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: error.message 
-        });
-    }
-});
-
-// Get all grupos
-app.get('/api/grupos', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT ano, id_tipo, tipo, code FROM grupos ORDER BY ano, id_tipo'
-        );
-        res.json(data);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get month configurations
-app.get('/api/month-configurations', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM month_configurations ORDER BY ano, mes'
-        );
-        res.json(data);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get product by name
-app.get('/api/produtos/:produto', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM produtos WHERE produto = @p0',
-            [req.params.produto]
-        );
-        res.json(data[0]);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get forecast values by product code
-app.get('/api/forecast-values/:productCode', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM forecast_values WHERE produto_codigo = @p0',
-            [req.params.productCode]
-        );
-        res.json(data);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Update forecast value
-app.post('/api/forecast-values', async (req, res) => {
-    try {
-        const { productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName } = req.body;
-        
-        console.log('Updating forecast value:', {
-            productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName
-        });
-        
-        // Get the current value before updating
-        const currentValues = await query(
-            'SELECT valor FROM forecast_values WHERE produto_codigo = @p0 AND ano = @p1 AND id_tipo = @p2 AND mes = @p3',
-            [productCodigo, ano, id_tipo, mes]
-        );
-        
-        const valorAnterior = currentValues.length > 0 ? currentValues[0].valor : null;
-        
-        console.log('Previous value:', valorAnterior);
-        
-        // Format the current date/time in SQL Server format
-        const currentDateTime = new Date().toISOString();
-        
-        // Update or insert the forecast value with user data and timestamp
-        await query(
-            `MERGE INTO forecast_values AS target
-             USING (VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)) 
-             AS source (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
-             ON target.produto_codigo = source.produto_codigo 
-             AND target.ano = source.ano 
-             AND target.id_tipo = source.id_tipo 
-             AND target.mes = source.mes
-             WHEN MATCHED THEN
-               UPDATE SET 
-                  valor = source.valor,
-                  user_id = source.user_id,
-                  username = source.username,
-                  user_fullname = source.user_fullname,
-                  modified_at = source.modified_at
-             WHEN NOT MATCHED THEN
-               INSERT (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
-               VALUES (source.produto_codigo, source.ano, source.id_tipo, source.mes, source.valor, 
-                       source.user_id, source.username, source.user_fullname, source.modified_at);`,
-            [productCodigo, ano, id_tipo, mes, valor, userId || null, username || null, userFullName || null, currentDateTime]
-        );
-        
-        // Log the change
-        await query(
-            `INSERT INTO forecast_values_log 
-             (produto_codigo, ano, id_tipo, mes, valor_anterior, valor_novo, user_id, username, user_fullname, modified_at)
-             VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9)`,
-            [productCodigo, ano, id_tipo, mes, valorAnterior, valor, userId || null, username || null, userFullName || null, currentDateTime]
-        );
-        
-        console.log('Successfully updated forecast value and logged the change');
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating forecast value:', error);
-        res.status(500).json({ error: `Internal server error: ${error.message}` });
-    }
-});
-
-// Get change history for a product
-app.get('/api/forecast-values-history/:productCode', async (req, res) => {
-    try {
-        const logs = await query(
-            `SELECT l.*, u.nome as user_name 
-             FROM forecast_values_log l
-             LEFT JOIN usuarios u ON l.user_id = u.id
-             WHERE produto_codigo = @p0
-             ORDER BY modified_at DESC`,
-            [req.params.productCode]
-        );
-        res.json(logs);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Middleware to handle 404 errors for API routes - must come after all API routes
-app.use('/api/*', (req, res) => {
-  console.log('API 404:', req.originalUrl);
-  res.status(404).json({ error: 'API route not found' });
-});
-
-// Static file serving and SPA fallback - must come after all API routes
-app.use(express.static('dist'));
-
-// Fallback to index.html for any other requests
-app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/dist/index.html');
+  res.status(200).json({ status: 'OK', serverTime: new Date().toISOString() });
 });
 
 // Database configuration
@@ -518,6 +268,60 @@ initializeDatabase()
 const onlineUsers = new Map();
 const PRESENCE_TIMEOUT = 2 * 60 * 1000; // 2 minutes in milliseconds
 
+// Presence routes
+app.post('/api/presence/update', (req, res) => {
+  try {
+    console.log('Presence update request received', req.body);
+    const { userId, username, nome } = req.body;
+    
+    if (!userId || !username) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Update or add user to online users
+    onlineUsers.set(userId, {
+      id: userId,
+      username,
+      nome,
+      lastSeen: new Date()
+    });
+    
+    console.log(`User presence updated: ${username} (${userId})`);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error updating presence:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/presence/users', (req, res) => {
+  try {
+    console.log('Get online users request received');
+    const now = new Date();
+    const activeUsers = [];
+    
+    // Filter out stale users
+    for (const [userId, userData] of onlineUsers.entries()) {
+      const lastSeen = new Date(userData.lastSeen);
+      const timeDiff = now.getTime() - lastSeen.getTime();
+      
+      if (timeDiff < PRESENCE_TIMEOUT) {
+        activeUsers.push(userData);
+      } else {
+        // Remove stale user
+        onlineUsers.delete(userId);
+      }
+    }
+    
+    res.json(activeUsers);
+    
+  } catch (error) {
+    console.error('Error getting online users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Clean up stale users periodically
 setInterval(() => {
   const now = new Date();
@@ -533,9 +337,259 @@ setInterval(() => {
   }
 }, 60000); // Run every minute
 
+// API Routes
+
+// Authentication endpoint with better error handling
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        console.log('Login attempt received:', req.body);
+        
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            console.log('Missing credentials');
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
+        }
+        
+        console.log('Finding user:', username);
+        const users = await query(
+            'SELECT * FROM usuarios WHERE username = @p0',
+            [username]
+        );
+        
+        if (users.length === 0) {
+            console.log('User not found:', username);
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
+        }
+        
+        const user = users[0];
+        console.log('User found:', user.username);
+        
+        // Simple password check (comparing directly)
+        if (String(password).trim() !== String(user.password_hash).trim()) {
+            console.log('Invalid password for user:', username);
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
+        }
+        
+        // Update last login time
+        await query(
+            'UPDATE usuarios SET last_login = GETDATE() WHERE id = @p0',
+            [user.id]
+        );
+        
+        // Construir dados do usuário sem informações sensíveis
+        const userData = {
+            id: user.id,
+            username: user.username,
+            nome: user.nome || '',
+            role: user.role || 'user'
+        };
+        
+        console.log('Login successful for user:', username, 'Data:', userData);
+        
+        // Return as plain JSON
+        return res.status(200).json(userData);
+    } catch (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ 
+            error: 'Internal server error',
+            details: err.message 
+        });
+    }
+});
+
+// Product routes
+app.get('/api/produtos', async (req, res) => {
+    try {
+        console.log('Fetching produtos...');
+        const data = await query(
+            'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
+        );
+        
+        // Log the structure of what we're returning
+        console.log(`Returning ${data.length} produtos`);
+        
+        // Return data as JSON
+        return res.json(data);
+    } catch (error) {
+        console.error('Error fetching produtos:', error);
+        return res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+    }
+});
+
+// Get all grupos
+app.get('/api/grupos', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT ano, id_tipo, tipo, code FROM grupos ORDER BY ano, id_tipo'
+        );
+        res.json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Get month configurations
+app.get('/api/month-configurations', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT * FROM month_configurations ORDER BY ano, mes'
+        );
+        res.json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Get product by name
+app.get('/api/produtos/:produto', async (req, res) => {
+    try {
+        console.log(`Fetching product details for: ${req.params.produto}`);
+        const data = await query(
+            'SELECT * FROM produtos WHERE produto = @p0',
+            [req.params.produto]
+        );
+        
+        if (data.length === 0) {
+            console.log(`Product not found: ${req.params.produto}`);
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        
+        console.log(`Successfully retrieved product: ${req.params.produto}`);
+        res.json(data[0]);
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Get forecast values by product code
+app.get('/api/forecast-values/:productCode', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT * FROM forecast_values WHERE produto_codigo = @p0',
+            [req.params.productCode]
+        );
+        res.json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Update forecast value
+app.post('/api/forecast-values', async (req, res) => {
+    try {
+        const { productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName } = req.body;
+        
+        console.log('Updating forecast value:', {
+            productCodigo, ano, id_tipo, mes, valor, userId, username, userFullName
+        });
+        
+        // Get the current value before updating
+        const currentValues = await query(
+            'SELECT valor FROM forecast_values WHERE produto_codigo = @p0 AND ano = @p1 AND id_tipo = @p2 AND mes = @p3',
+            [productCodigo, ano, id_tipo, mes]
+        );
+        
+        const valorAnterior = currentValues.length > 0 ? currentValues[0].valor : null;
+        
+        console.log('Previous value:', valorAnterior);
+        
+        // Format the current date/time in SQL Server format
+        const currentDateTime = new Date().toISOString();
+        
+        // Update or insert the forecast value with user data and timestamp
+        await query(
+            `MERGE INTO forecast_values AS target
+             USING (VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)) 
+             AS source (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
+             ON target.produto_codigo = source.produto_codigo 
+             AND target.ano = source.ano 
+             AND target.id_tipo = source.id_tipo 
+             AND target.mes = source.mes
+             WHEN MATCHED THEN
+               UPDATE SET 
+                  valor = source.valor,
+                  user_id = source.user_id,
+                  username = source.username,
+                  user_fullname = source.user_fullname,
+                  modified_at = source.modified_at
+             WHEN NOT MATCHED THEN
+               INSERT (produto_codigo, ano, id_tipo, mes, valor, user_id, username, user_fullname, modified_at)
+               VALUES (source.produto_codigo, source.ano, source.id_tipo, source.mes, source.valor, 
+                       source.user_id, source.username, source.user_fullname, source.modified_at);`,
+            [productCodigo, ano, id_tipo, mes, valor, userId || null, username || null, userFullName || null, currentDateTime]
+        );
+        
+        // Log the change
+        await query(
+            `INSERT INTO forecast_values_log 
+             (produto_codigo, ano, id_tipo, mes, valor_anterior, valor_novo, user_id, username, user_fullname, modified_at)
+             VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9)`,
+            [productCodigo, ano, id_tipo, mes, valorAnterior, valor, userId || null, username || null, userFullName || null, currentDateTime]
+        );
+        
+        console.log('Successfully updated forecast value and logged the change');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating forecast value:', error);
+        res.status(500).json({ error: `Internal server error: ${error.message}` });
+    }
+});
+
+// Get change history for a product
+app.get('/api/forecast-values-history/:productCode', async (req, res) => {
+    try {
+        const logs = await query(
+            `SELECT l.*, u.nome as user_name 
+             FROM forecast_values_log l
+             LEFT JOIN usuarios u ON l.user_id = u.id
+             WHERE produto_codigo = @p0
+             ORDER BY modified_at DESC`,
+            [req.params.productCode]
+        );
+        res.json(logs);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Error handling middleware for unhandled errors
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message || 'Unknown error occurred',
+    path: req.url
+  });
+});
+
+// Catch-all route for undefined routes
+app.use((req, res) => {
+  console.log(`404 - Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({
+    error: 'Not Found',
+    message: `The requested endpoint ${req.method} ${req.url} does not exist`
+  });
+});
+
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port} at ${new Date().toISOString()}`);
+    console.log('CORS configured for origins:', ['http://localhost:8080', 'https://preview--forecastclassic.lovable.app']);
     
     // Initialize database on server start
     initializeDatabase()
