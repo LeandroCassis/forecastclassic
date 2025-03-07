@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, isAuthenticated, getCurrentUser, loginUser, logoutUser } from '@/services/authService';
-import { startPresenceService, stopPresenceService } from '@/services/presenceService';
 
 interface AuthContextType {
   user: User | null;
@@ -35,15 +34,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
-        startPresenceService();
       }
     }
     setLoading(false);
-    
-    // Clean up presence service on unmount
-    return () => {
-      stopPresenceService();
-    };
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
@@ -51,18 +44,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const loggedInUser = await loginUser(username, password);
       setUser(loggedInUser);
-      
-      // Start presence service after login
-      startPresenceService();
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    // Stop presence service before logout
-    stopPresenceService();
-    
     logoutUser();
     setUser(null);
   };
