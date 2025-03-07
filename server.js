@@ -32,9 +32,19 @@ app.use(express.json({
   }
 }));
 
-// Log all requests
+// Clear middleware - make sure all requests have CORS headers
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Log all requests - enhanced logging
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - IP: ${req.ip} - User-Agent: ${req.get('User-Agent')}`);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   next();
 });
 
@@ -55,6 +65,15 @@ app.use((req, res, next) => {
       } catch (e) {
         console.error('Error stringifying response:', e);
         body = JSON.stringify({ error: 'Internal server error during response serialization' });
+      }
+    } else {
+      // If it's a string but not JSON, try to parse it to validate
+      try {
+        JSON.parse(body);
+      } catch (e) {
+        console.error('Response is not valid JSON:', body.substring(0, 100));
+        // Fix: If the body is not valid JSON, convert it to a JSON response
+        body = JSON.stringify({ error: 'Invalid JSON response', data: body.substring(0, 100) });
       }
     }
     
@@ -79,7 +98,7 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK' });
+  res.status(200).json({ status: 'OK', serverTime: new Date().toISOString() });
 });
 
 // Database configuration
@@ -436,18 +455,21 @@ app.get('/api/month-configurations', async (req, res) => {
 // Get product by name
 app.get('/api/produtos/:produto', async (req, res) => {
     try {
+        console.log(`Fetching product details for: ${req.params.produto}`);
         const data = await query(
             'SELECT * FROM produtos WHERE produto = @p0',
             [req.params.produto]
         );
         
         if (data.length === 0) {
+            console.log(`Product not found: ${req.params.produto}`);
             return res.status(404).json({ error: 'Product not found' });
         }
         
+        console.log(`Successfully retrieved product: ${req.params.produto}`);
         res.json(data[0]);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching product:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
@@ -545,9 +567,29 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
     }
 });
 
+// Error handling middleware for unhandled errors
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message || 'Unknown error occurred',
+    path: req.url
+  });
+});
+
+// Catch-all route for undefined routes
+app.use((req, res) => {
+  console.log(`404 - Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({
+    error: 'Not Found',
+    message: `The requested endpoint ${req.method} ${req.url} does not exist`
+  });
+});
+
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port} at ${new Date().toISOString()}`);
+    console.log('CORS configured for origins:', ['http://localhost:8080', 'https://preview--forecastclassic.lovable.app']);
     
     // Initialize database on server start
     initializeDatabase()
