@@ -47,8 +47,21 @@ app.get('/api/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Make sure all API responses have correct content type
+// Ensure all API responses have proper JSON format
 app.use('/api', (req, res, next) => {
+  // Intercept the json method to ensure proper formatting
+  const originalJson = res.json;
+  res.json = function(body) {
+    // If we're dealing with an error, format it properly
+    if (body && body.error) {
+      console.error('Error response:', body.error);
+    }
+    
+    // Call the original json method
+    return originalJson.call(this, body);
+  };
+  
+  // Set proper Content-Type
   res.setHeader('Content-Type', 'application/json');
   next();
 });
@@ -291,7 +304,7 @@ setInterval(() => {
 
 // API Routes
 
-// Authentication endpoint with simplified response handling
+// Authentication endpoint with better error handling
 app.post('/api/auth/login', async (req, res) => {
     try {
         console.log('Login attempt received:', req.body);
@@ -345,17 +358,14 @@ app.post('/api/auth/login', async (req, res) => {
         
         console.log('Login successful for user:', username, 'Data:', userData);
         
-        // Enviar resposta como JSON simplificado para evitar problemas de parseamento
-        res.status(200).json(userData);
+        // Return as plain JSON
+        return res.status(200).json(userData);
     } catch (err) {
         console.error('Login error:', err);
-        
-        // Garantir que erros também sejam retornados como JSON
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.status(500).send(JSON.stringify({ 
+        return res.status(500).json({ 
             error: 'Internal server error',
             details: err.message 
-        }));
+        });
     }
 });
 
