@@ -1,18 +1,18 @@
 
 import { config } from '@/config/env';
 import { useApiQuery } from './useApiQuery';
-import { MonthConfiguration } from './useForecastTypes';
+import { MonthConfiguration, MonthConfigurationsMap } from './useForecastTypes';
 
 /**
  * Hook to fetch month configurations, which rarely changes
  */
 export const useMonthConfigurationsData = () => {
-  return useApiQuery(
+  return useApiQuery<any[], MonthConfigurationsMap>(
     ['month_configurations'],
     `${config.API_URL}/month-configurations`,
     {
       select: (data: any[]) => {
-        const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
+        const configByYear: MonthConfigurationsMap = {};
         
         data.forEach((config: any) => {
           if (!configByYear[config.ano]) {

@@ -5,14 +5,14 @@ import { useToast } from '@/components/ui/use-toast';
 /**
  * A utility hook for making API queries with consistent error handling
  */
-export const useApiQuery = <TData = unknown, TError = Error>(
+export const useApiQuery = <TData = unknown, TResult = TData, TError = Error>(
   queryKey: string[],
   url: string,
-  options?: Omit<UseQueryOptions<TData, TError, TData>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<TData, TError, TResult>, 'queryKey' | 'queryFn'>
 ) => {
   const { toast } = useToast();
   
-  return useQuery<TData, TError>({
+  return useQuery<TData, TError, TResult>({
     queryKey,
     queryFn: async () => {
       try {

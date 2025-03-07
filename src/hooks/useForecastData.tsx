@@ -3,8 +3,11 @@ import { useProductData } from './useProductData';
 import { useGruposData } from './useGruposData';
 import { useMonthConfigurationsData } from './useMonthConfigurationsData';
 import { useForecastValuesData } from './useForecastValuesData';
-import { MonthConfiguration, Grupo } from './useForecastTypes';
+import type { MonthConfiguration, Grupo, MonthConfigurationsMap, ForecastValuesMap, ProductData } from './useForecastTypes';
 
+/**
+ * Main hook that aggregates all forecast data needed for the forecast table
+ */
 export const useForecastData = (produto: string) => {
   // Use our specialized hooks to fetch the data
   const { data: productData, isError: productError } = useProductData(produto);
@@ -24,4 +27,4 @@ export const useForecastData = (produto: string) => {
 };
 
 // Re-export types for consumers
-export { MonthConfiguration, Grupo };
+export type { MonthConfiguration, Grupo, MonthConfigurationsMap, ForecastValuesMap, ProductData };
