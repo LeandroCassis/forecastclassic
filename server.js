@@ -7,14 +7,16 @@ import crypto from 'crypto';
 const app = express();
 const port = 3005;
 
-// Configurar CORS para aceitar solicitações de qualquer origem com configurações mais abrangentes
+// Configure CORS with more specific options
 app.use(cors({
-  origin: '*', // Permitir qualquer origem de forma explícita
+  origin: ['http://localhost:8080', 'https://preview--forecastclassic.lovable.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
 }));
+
+// Add OPTIONS preflight handler
+app.options('*', cors());
 
 // Adicionar middleware para tratar solicitações OPTIONS (preflight CORS)
 app.options('*', cors());
@@ -45,41 +47,9 @@ app.get('/api/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Middleware para garantir respostas JSON corretas em todas as rotas API
+// Make sure all API responses have correct content type
 app.use('/api', (req, res, next) => {
-  // Skip health check endpoint
-  if (req.path === '/health') {
-    return next();
-  }
-  
-  // Defina os cabeçalhos antes de qualquer outro processamento
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  
-  // Intercepta o método json() para garantir que as respostas são enviadas corretamente
-  const originalJson = res.json;
-  res.json = function(body) {
-    let jsonBody = body;
-    
-    // Se não for uma string, tenta converter para JSON
-    if (typeof body !== 'string') {
-      try {
-        jsonBody = JSON.stringify(body);
-      } catch (e) {
-        console.error('Error stringifying JSON response:', e);
-        jsonBody = JSON.stringify({ error: 'Error processing response' });
-      }
-    }
-    
-    // Garante que o Content-Type seja definido novamente
-    this.setHeader('Content-Type', 'application/json; charset=utf-8');
-    
-    // Envia o corpo da resposta
-    this.send(jsonBody);
-    return this;
-  };
-  
+  res.setHeader('Content-Type', 'application/json');
   next();
 });
 

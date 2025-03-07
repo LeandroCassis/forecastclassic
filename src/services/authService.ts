@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { findUserByCredentials } from "@/data/users";
 
@@ -9,7 +8,6 @@ export interface User {
   role: string;
 }
 
-// Local authentication using the users data file
 export const loginUser = async (username: string, password: string): Promise<User> => {
   try {
     console.log('Attempting login with username:', username);
@@ -53,7 +51,6 @@ export const loginUser = async (username: string, password: string): Promise<Use
   }
 };
 
-// Check if a user is authenticated
 export const isAuthenticated = (): boolean => {
   try {
     const userJson = localStorage.getItem('user');
@@ -66,7 +63,6 @@ export const isAuthenticated = (): boolean => {
   }
 };
 
-// Get the current authenticated user
 export const getCurrentUser = (): User | null => {
   try {
     const userJson = localStorage.getItem('user');
@@ -85,9 +81,7 @@ export const getCurrentUser = (): User | null => {
   }
 };
 
-// Logout function
 export const logoutUser = (): void => {
   localStorage.removeItem('user');
-  // Redirect to login page if needed
   window.location.href = '/login';
 };
