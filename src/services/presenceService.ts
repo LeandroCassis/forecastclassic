@@ -19,13 +19,13 @@ const getApiUrl = () => {
   const hostname = window.location.hostname;
   
   if (hostname === 'localhost') {
-    return 'http://localhost:3005/api';
+    return 'http://localhost:3005';
   } else if (hostname.includes('lovable.dev') || hostname.includes('lovable.app')) {
-    // For lovable.dev and lovable.app domains, use the full URL
-    return `${window.location.protocol}//${hostname}/api`;
+    // Para lovable.dev e lovable.app, usar URL completa
+    return `${window.location.protocol}//${hostname}`;
   } else {
-    // Default fallback for other environments
-    return '/api';
+    // Fallback padrão para outros ambientes
+    return '';
   }
 };
 
@@ -49,7 +49,10 @@ export const updatePresence = async (): Promise<void> => {
   if (!currentUser) return;
 
   try {
-    const response = await fetch(`${getApiUrl()}/presence/update`, {
+    // Verificação para debug
+    console.log('Sending presence update to:', `${getApiUrl()}/api/presence/update`);
+    
+    const response = await fetch(`${getApiUrl()}/api/presence/update`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,10 +63,26 @@ export const updatePresence = async (): Promise<void> => {
         nome: currentUser.nome
       }),
     });
-
+    
+    // Log para debug da resposta
+    console.log('Presence update response status:', response.status);
+    
+    // Se a resposta não for bem-sucedida, tente ler o conteúdo como texto para debug
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response content:', errorText);
       throw new Error(`Failed to update presence: ${response.status}`);
     }
+
+    // Tente fazer parse da resposta como JSON, com fallback para um objeto simples em caso de erro
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch (e) {
+      console.warn('Failed to parse JSON response, using default success object:', e);
+      responseData = { success: true };
+    }
+    console.log('Presence update response:', responseData);
   } catch (error) {
     console.error('Presence update error:', error);
   }
@@ -72,12 +91,34 @@ export const updatePresence = async (): Promise<void> => {
 // Get all online users
 export const getOnlineUsers = async (): Promise<OnlineUser[]> => {
   try {
-    const response = await fetch(`${getApiUrl()}/presence/users`);
+    // Verificação para debug
+    console.log('Fetching online users from:', `${getApiUrl()}/api/presence/users`);
+    
+    const response = await fetch(`${getApiUrl()}/api/presence/users`);
+    
+    // Log para debug da resposta
+    console.log('Get online users response status:', response.status);
+    
+    // Se a resposta não for bem-sucedida, tente ler o conteúdo como texto para debug
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response content:', errorText);
       throw new Error(`Failed to get online users: ${response.status}`);
     }
     
-    const users = await response.json();
+    // Tente fazer parse da resposta como JSON, com fallback para um array vazio em caso de erro
+    let users;
+    try {
+      users = await response.json();
+      console.log('Get online users response:', users);
+    } catch (e) {
+      console.error('Failed to parse JSON response:', e);
+      // Se falhar em fazer parse, tente ler como texto para debug
+      const responseText = await response.text();
+      console.error('Non-JSON response content:', responseText);
+      return onlineUsers; // Return cached data on error
+    }
+    
     onlineUsers = users.map((user: any) => ({
       ...user,
       lastSeen: new Date(user.lastSeen),
