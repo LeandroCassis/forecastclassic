@@ -7,13 +7,86 @@ import crypto from 'crypto';
 const app = express();
 const port = 3005;
 
-app.use(cors());
-app.use(express.json());
+// Configurar CORS para aceitar solicitações de qualquer origem com configurações mais abrangentes
+app.use(cors({
+  origin: '*', // Permitir qualquer origem de forma explícita
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// Adicionar middleware para tratar solicitações OPTIONS (preflight CORS)
+app.options('*', cors());
+
+// Parse JSON request bodies com configurações adicionais
+app.use(express.json({
+  limit: '10mb', // Aumentar o limite do tamanho do corpo
+  strict: false, // Ser menos rigoroso com o formato JSON
+  verify: (req, res, buf) => { 
+    try {
+      JSON.parse(buf);
+    } catch (e) {
+      console.error('Invalid JSON in request:', e);
+      // Continuamos processando mesmo com JSON inválido
+    }
+  }
+}));
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  res.status(200).send('OK');
+});
+
+// Middleware para garantir respostas JSON corretas em todas as rotas API
+app.use('/api', (req, res, next) => {
+  // Skip health check endpoint
+  if (req.path === '/health') {
+    return next();
+  }
+  
+  // Defina os cabeçalhos antes de qualquer outro processamento
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  
+  // Intercepta o método json() para garantir que as respostas são enviadas corretamente
+  const originalJson = res.json;
+  res.json = function(body) {
+    let jsonBody = body;
+    
+    // Se não for uma string, tenta converter para JSON
+    if (typeof body !== 'string') {
+      try {
+        jsonBody = JSON.stringify(body);
+      } catch (e) {
+        console.error('Error stringifying JSON response:', e);
+        jsonBody = JSON.stringify({ error: 'Error processing response' });
+      }
+    }
+    
+    // Garante que o Content-Type seja definido novamente
+    this.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    // Envia o corpo da resposta
+    this.send(jsonBody);
+    return this;
+  };
+  
+  next();
+});
 
 // Database configuration
 const config = {
     server: 'vesperttine-server.database.windows.net',
-    database: 'FORECAST',  // Alterado de VESPERTTINE para FORECAST
+    database: 'FORECAST',
     user: 'vesperttine',
     password: '840722aA',
     options: {
@@ -62,7 +135,7 @@ async function query(queryString, params) {
     }
 }
 
-// Check if users table exists, create it if not
+// Initialize database and create necessary tables
 async function initializeDatabase() {
     try {
         // Verificar se a tabela usuarios existe
@@ -131,7 +204,7 @@ async function initializeDatabase() {
     }
 }
 
-// Create users if they don't exist
+// Create initial users
 async function createUsers() {
     try {
         const users = [
@@ -173,50 +246,118 @@ initializeDatabase()
     .then(() => createUsers())
     .catch(console.error);
 
-// Authentication endpoint
+// Store online users with timeout
+const onlineUsers = new Map();
+const PRESENCE_TIMEOUT = 2 * 60 * 1000; // 2 minutes in milliseconds
+
+// Presence routes
+app.post('/api/presence/update', (req, res) => {
+  try {
+    console.log('Presence update request received', req.body);
+    const { userId, username, nome } = req.body;
+    
+    if (!userId || !username) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Update or add user to online users
+    onlineUsers.set(userId, {
+      id: userId,
+      username,
+      nome,
+      lastSeen: new Date()
+    });
+    
+    console.log(`User presence updated: ${username} (${userId})`);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error updating presence:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/presence/users', (req, res) => {
+  try {
+    console.log('Get online users request received');
+    const now = new Date();
+    const activeUsers = [];
+    
+    // Filter out stale users
+    for (const [userId, userData] of onlineUsers.entries()) {
+      const lastSeen = new Date(userData.lastSeen);
+      const timeDiff = now.getTime() - lastSeen.getTime();
+      
+      if (timeDiff < PRESENCE_TIMEOUT) {
+        activeUsers.push(userData);
+      } else {
+        // Remove stale user
+        onlineUsers.delete(userId);
+      }
+    }
+    
+    res.json(activeUsers);
+    
+  } catch (error) {
+    console.error('Error getting online users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Clean up stale users periodically
+setInterval(() => {
+  const now = new Date();
+  
+  for (const [userId, userData] of onlineUsers.entries()) {
+    const lastSeen = new Date(userData.lastSeen);
+    const timeDiff = now.getTime() - lastSeen.getTime();
+    
+    if (timeDiff >= PRESENCE_TIMEOUT) {
+      console.log(`Removing stale user: ${userData.username} (${userId})`);
+      onlineUsers.delete(userId);
+    }
+  }
+}, 60000); // Run every minute
+
+// API Routes
+
+// Authentication endpoint with simplified response handling
 app.post('/api/auth/login', async (req, res) => {
     try {
+        console.log('Login attempt received:', req.body);
+        
         const { username, password } = req.body;
         
-        console.log('=== Login attempt ===');
-        console.log('Username:', username);
-        console.log('Password:', password);
-        
         if (!username || !password) {
-            console.log('Missing username or password');
-            return res.status(400).json({ error: 'Username and password are required' });
+            console.log('Missing credentials');
+            return res.status(400).json({ 
+                error: 'Username and password are required' 
+            });
         }
         
-        // Query the users table
+        console.log('Finding user:', username);
         const users = await query(
             'SELECT * FROM usuarios WHERE username = @p0',
             [username]
         );
         
-        console.log('Found users:', users);
-        
         if (users.length === 0) {
-            console.log('No user found with username:', username);
-            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+            console.log('User not found:', username);
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
         }
         
         const user = users[0];
-        console.log('Found user:', {
-            id: user.id,
-            username: user.username,
-            password_hash: user.password_hash,
-            role: user.role
-        });
+        console.log('User found:', user.username);
         
-        // Comparação da senha em texto plano
+        // Simple password check (comparing directly)
         if (String(password).trim() !== String(user.password_hash).trim()) {
-            console.log('Password mismatch');
-            console.log('Received:', password);
-            console.log('Expected:', user.password_hash);
-            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+            console.log('Invalid password for user:', username);
+            return res.status(401).json({ 
+                error: 'Invalid username or password' 
+            });
         }
-        
-        console.log('Login successful');
         
         // Update last login time
         await query(
@@ -224,47 +365,44 @@ app.post('/api/auth/login', async (req, res) => {
             [user.id]
         );
         
+        // Construir dados do usuário sem informações sensíveis
         const userData = {
             id: user.id,
             username: user.username,
-            nome: user.nome,
-            role: user.role
+            nome: user.nome || '',
+            role: user.role || 'user'
         };
         
-        console.log('Sending user data:', userData);
-        res.json(userData);
+        console.log('Login successful for user:', username, 'Data:', userData);
+        
+        // Enviar resposta como JSON simplificado para evitar problemas de parseamento
+        res.status(200).json(userData);
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        
+        // Garantir que erros também sejam retornados como JSON
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(500).send(JSON.stringify({ 
+            error: 'Internal server error',
+            details: err.message 
+        }));
     }
 });
 
-// Get product by name
-app.get('/api/produtos/:produto', async (req, res) => {
-    try {
-        const data = await query(
-            'SELECT * FROM produtos WHERE produto = @p0',
-            [req.params.produto]
-        );
-        res.json(data[0]);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get all produtos for filtering
+// Product routes
 app.get('/api/produtos', async (req, res) => {
     try {
-        console.log('Fetching produtos from Azure SQL...');
+        console.log('Fetching produtos...');
         const data = await query(
             'SELECT codigo, produto, empresa, fabrica, familia1, familia2, marca FROM produtos'
         );
-        console.log(`Found ${data.length} produtos`);
         res.json(data);
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching produtos:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
     }
 });
 
@@ -288,6 +426,20 @@ app.get('/api/month-configurations', async (req, res) => {
             'SELECT * FROM month_configurations ORDER BY ano, mes'
         );
         res.json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get product by name
+app.get('/api/produtos/:produto', async (req, res) => {
+    try {
+        const data = await query(
+            'SELECT * FROM produtos WHERE produto = @p0',
+            [req.params.produto]
+        );
+        res.json(data[0]);
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -387,6 +539,12 @@ app.get('/api/forecast-values-history/:productCode', async (req, res) => {
     }
 });
 
+// Start server
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running at http://localhost:${port} at ${new Date().toISOString()}`);
+    
+    // Initialize database on server start
+    initializeDatabase()
+        .then(() => createUsers())
+        .catch(console.error);
 });

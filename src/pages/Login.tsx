@@ -1,25 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { login, isLoggedIn } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Reset error when fields change
-    if (error) setError(null);
-  }, [username, password]);
 
   useEffect(() => {
     // Redirect to home if already logged in
@@ -32,12 +25,15 @@ const LoginPage = () => {
     e.preventDefault();
     
     if (!username.trim() || !password.trim()) {
-      setError("Preencha o usuário e senha para continuar");
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o usuário e senha para continuar",
+        variant: "destructive"
+      });
       return;
     }
     
     setIsLoading(true);
-    setError(null);
     
     try {
       await login(username, password);
@@ -47,9 +43,29 @@ const LoginPage = () => {
       });
       navigate('/');
     } catch (error) {
-      // Display the error in the form
-      setError(error.message || "Erro ao conectar com o servidor");
+      // Login errors are handled in the auth service
       console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Quick login for testing
+  const quickLogin = async (e: React.MouseEvent, testUser: string, testPass: string) => {
+    e.preventDefault();
+    setUsername(testUser);
+    setPassword(testPass);
+    setIsLoading(true);
+    
+    try {
+      await login(testUser, testPass);
+      toast({
+        title: "Login automático realizado",
+        description: "Login com credenciais de teste"
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Quick login error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -63,13 +79,6 @@ const LoginPage = () => {
             <h1 className="text-3xl font-bold">S&OP GRUPO CLASSIC</h1>
             <p className="text-gray-500 mt-2">Faça login para acessar o sistema</p>
           </div>
-          
-          {error && (
-            <div className="bg-red-100 border border-red-200 text-red-800 rounded p-3 mb-4 flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -107,9 +116,36 @@ const LoginPage = () => {
               className="w-full" 
               disabled={isLoading}
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : 'Entrar'}
             </Button>
           </form>
+          
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <p className="text-sm text-gray-500 mb-4">Login rápido para teste:</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={isLoading}
+                onClick={(e) => quickLogin(e, 'admin', 'admin')}
+              >
+                Admin
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={isLoading}
+                onClick={(e) => quickLogin(e, 'rogerio.bousas', 'Rogerio123')}
+              >
+                Rogério
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

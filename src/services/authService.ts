@@ -1,5 +1,6 @@
 
 import { toast } from "@/hooks/use-toast";
+import { findUserByCredentials } from "@/data/users";
 
 export interface User {
   id: number;
@@ -8,81 +9,85 @@ export interface User {
   role: string;
 }
 
-// Store the current authenticated user
-let currentUser: User | null = null;
-
-// Check if user is authenticated
-export const isAuthenticated = (): boolean => {
-  if (currentUser) return true;
-  
-  // Check if we have user info in localStorage
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    try {
-      currentUser = JSON.parse(storedUser);
-      return true;
-    } catch (e) {
-      localStorage.removeItem('user');
-    }
-  }
-  return false;
-};
-
-// Get the current user
-export const getCurrentUser = (): User | null => {
-  if (currentUser) return currentUser;
-  
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    try {
-      currentUser = JSON.parse(storedUser);
-      return currentUser;
-    } catch (e) {
-      localStorage.removeItem('user');
-    }
-  }
-  return null;
-};
-
-// Login function using API
-export const login = async (username: string, password: string): Promise<User> => {
+// Local authentication using the users data file
+export const loginUser = async (username: string, password: string): Promise<User> => {
   try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Serviço de autenticação não encontrado. Verifique sua conexão com o servidor.');
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(errorData.error || `Erro no login: ${response.status}`);
-      }
+    console.log('Attempting login with username:', username);
+    
+    // Simulate network delay for a more realistic experience
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const user = findUserByCredentials(username, password);
+    
+    if (!user) {
+      const errorMessage = 'Nome de usuário ou senha inválidos';
+      console.error('Login failed:', errorMessage);
+      toast({ 
+        title: 'Erro no login', 
+        description: errorMessage,
+        variant: 'destructive'
+      });
+      throw new Error(errorMessage);
     }
-
-    const user = await response.json();
     
-    // Store user info in localStorage and memory
-    localStorage.setItem('user', JSON.stringify(user));
-    currentUser = user;
+    // Create a user object without the password field for security
+    const userData: User = {
+      id: user.id,
+      username: user.username,
+      nome: user.nome,
+      role: user.role
+    };
     
-    return user;
+    // Store user in localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    return userData;
   } catch (error) {
+    console.error('Login process error:', error);
     toast({ 
       title: 'Erro no login', 
-      description: error.message || 'Não foi possível conectar ao servidor', 
-      variant: "destructive" 
+      description: (error as Error).message || 'Falha na autenticação',
+      variant: 'destructive'
     });
     throw error;
   }
 };
 
+// Check if a user is authenticated
+export const isAuthenticated = (): boolean => {
+  try {
+    const userJson = localStorage.getItem('user');
+    if (!userJson) return false;
+    
+    const user = JSON.parse(userJson);
+    return Boolean(user && user.id && user.username);
+  } catch {
+    return false;
+  }
+};
+
+// Get the current authenticated user
+export const getCurrentUser = (): User | null => {
+  try {
+    const userJson = localStorage.getItem('user');
+    if (!userJson) return null;
+    
+    const user = JSON.parse(userJson);
+    if (!user || !user.id || !user.username) {
+      localStorage.removeItem('user');
+      return null;
+    }
+    
+    return user;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
 // Logout function
-export const logout = (): void => {
+export const logoutUser = (): void => {
   localStorage.removeItem('user');
-  currentUser = null;
+  // Redirect to login page if needed
+  window.location.href = '/login';
 };

@@ -1,22 +1,5 @@
-
 import { useQuery } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-
-// Helper function to safely parse JSON
-const safeJsonParse = async (response: Response) => {
-  const text = await response.text();
-  try {
-    // Check if the response starts with HTML
-    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-      console.error('Received HTML instead of JSON:', text.substring(0, 100));
-      throw new Error('Received HTML instead of JSON. Server might be down or misconfigured.');
-    }
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('JSON parse error:', error, 'Response was:', text.substring(0, 200));
-    throw new Error('Failed to parse server response');
-  }
-};
+import { config } from '@/config/env';
 
 export const useForecastData = (produto: string) => {
   // Product data query
@@ -24,9 +7,9 @@ export const useForecastData = (produto: string) => {
     queryKey: ['product', produto],
     queryFn: async () => {
       try {
-        const response = await fetch(`/api/produtos/${encodeURIComponent(produto)}`);
+        const response = await fetch(`${config.API_URL}/produtos/${encodeURIComponent(produto)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        return safeJsonParse(response);
+        return await response.json();
       } catch (error) {
         console.error('Exception in product fetch:', error);
         throw error;
@@ -42,9 +25,9 @@ export const useForecastData = (produto: string) => {
     queryKey: ['grupos'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/grupos');
+        const response = await fetch(`${config.API_URL}/grupos`);
         if (!response.ok) throw new Error('Network response was not ok');
-        return safeJsonParse(response);
+        return await response.json();
       } catch (error) {
         console.error('Exception in grupos fetch:', error);
         throw error;
@@ -60,9 +43,9 @@ export const useForecastData = (produto: string) => {
     queryKey: ['month_configurations'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/month-configurations');
+        const response = await fetch(`${config.API_URL}/month-configurations`);
         if (!response.ok) throw new Error('Network response was not ok');
-        const data = await safeJsonParse(response);
+        const data = await response.json();
         const configByYear: { [key: string]: { [key: string]: MonthConfiguration } } = {};
         
         data.forEach((config: any) => {
@@ -94,9 +77,9 @@ export const useForecastData = (produto: string) => {
       if (!productData?.codigo) return {};
       
       try {
-        const response = await fetch(`/api/forecast-values/${encodeURIComponent(productData.codigo)}`);
+        const response = await fetch(`${config.API_URL}/forecast-values/${encodeURIComponent(productData.codigo)}`);
         if (!response.ok) throw new Error('Network response was not ok');
-        const data = await safeJsonParse(response);
+        const data = await response.json();
         
         const transformedData: { [key: string]: { [key: string]: number } } = {};
         data.forEach((row: any) => {
