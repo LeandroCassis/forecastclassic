@@ -1,4 +1,3 @@
-
 import { User, getCurrentUser } from './authService';
 import { toast } from "@/hooks/use-toast";
 
@@ -17,9 +16,17 @@ let presenceInterval: ReturnType<typeof setInterval> | null = null;
 
 // API URL based on environment
 const getApiUrl = () => {
-  return window.location.hostname === 'localhost' 
-    ? 'http://localhost:3005/api' 
-    : '/api';
+  const hostname = window.location.hostname;
+  
+  if (hostname === 'localhost') {
+    return 'http://localhost:3005/api';
+  } else if (hostname.includes('lovable.dev') || hostname.includes('lovable.app')) {
+    // For lovable.dev and lovable.app domains, use the full URL
+    return `${window.location.protocol}//${hostname}/api`;
+  } else {
+    // Default fallback for other environments
+    return '/api';
+  }
 };
 
 // Get initials from user name
